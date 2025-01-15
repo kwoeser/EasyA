@@ -1,0 +1,22 @@
+Department (department):
+
+Type: Dropdown selection
+Function: Allows the user to select a department to filter the data displayed. This should be used by the backend to fetch classes and teachers specific to the selected department.
+
+
+Class (class):
+
+Type: Dropdown selection
+Function: Allows the user to select a specific class within the chosen department. The backend needs to use this variable to further refine the query for fetching teachers and determining grade distributions.
+
+
+Teacher (teacher):
+
+Type: Dropdown selection
+Function: Enables selection of a teacher. This variable is critical for the backend to fetch and display specific grade distribution data, such as the percentage of A grades, for the selected teacher and class combination.
+
+
+Results (results):
+
+Type: Dynamic list
+Function: This is not a direct input variable like the others, but it's an output where the backend will send the filtered results to be displayed. Each result item should include the class name, teacher's name, and the percentage of A's, which corresponds to how the data should be presented based on the applied filters.

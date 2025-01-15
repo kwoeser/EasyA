@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>EasyA Distribution Viewer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <!-- Centered Title -->
+        <h1 class="text-center">EasyA Distribution Viewer</h1>
+
+        <!-- Filter Form -->
+        <form method="GET" action="/user" class="mb-4">
+            <div class="row">
+
+                <!-- Department Dropdown -->
+                <div class="col-md-4">
+                    <label for="department">Department:</label>
+                    <select name="department" id="department" class="form-control">
+                        <option value="">Select a Department</option>
+                        {% for department in departments %}
+                            <option value="{{ department }}" {% if request.args.get('department') == department %}selected{% endif %}>
+                                {{ department }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Class Dropdown -->
+                <div class="col-md-4">
+                    <label for="class">Class:</label>
+                    <select name="class" id="class" class="form-control">
+                        <option value="">Select a Class</option>
+                        {% for class in classes %}
+                            <option value="{{ class }}" {% if request.args.get('class') == class %}selected{% endif %}>
+                                {{ class }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+
+                <!-- Teacher Dropdown -->
+                <div class="col-md-4">
+                    <label for="teacher">Teacher:</label>
+                    <select name="teacher" id="teacher" class="form-control">
+                        <option value="">Select a Teacher</option>
+                        {% for teacher in teachers %}
+                            <option value="{{ teacher }}" {% if request.args.get('teacher') == teacher %}selected{% endif %}>
+                                {{ teacher }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Centered Submit Button -->
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            </div>
+        </form>
+
+        
+        
+        
+        
+        
+        <!-- Results Section -->
+        <!-- Under Construction -->
+        <!-- Will be using AJAX for refresh -->
+        <h2>Results</h2>
+        <ul>
+            {% for result in results %}
+                <li>{{ result.class }} - {{ result.teacher }}: {{ result.percent_a }}% A</li>
+            {% endfor %}
+        </ul>
+    </div>
+</body>
+</html>
