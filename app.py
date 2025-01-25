@@ -17,12 +17,27 @@ def load_grade_data():
         return {"error": "Invalid JSON format in the file"}
 
 
-
-# might delete (we need to find another way to extract departments unless we decide another way)
 def extract_department(class_code):
-    if len(class_code) > 3 and class_code[3].isdigit():
-        return class_code[:3]
-    return class_code[:2]
+    # extract the department name from the class code, stop when you run into the first character.
+    # return all the characters before the first number
+
+    for i, char in enumerate(class_code):
+        if char.isdigit():
+            return class_code[:i]  
+        
+    # print(extract_department("MATH111")) 
+    return class_code  
+
+def extract_class_num(class_code):
+    # extract the class number from the class code
+    # return everything after then characters end and only the numbers
+
+    for i, char in enumerate(class_code):
+        if char.isdigit():
+            return class_code[i:]  
+
+    return 
+
 
 
 @app.route('/admin', methods=['GET'])
@@ -46,7 +61,7 @@ def admin_page():
 def user_page():
     data = load_grade_data()
 
-    # Populate dropdown data
+    # Store and populate dropdown data
     departments_set = set()
     classes_set = set()
     teachers_set = set()
@@ -54,27 +69,31 @@ def user_page():
     for classes, entries in data.items():
         # Department is the first 3 characters
         # Maybe issues beause all departments aren't 3 characters? AA is issue
-        departments_set.add(classes[:3])  
-        classes_set.add(classes)
+        # print(extract_department("MATH111")) 
+        departments_set.add(extract_department(classes))  
+        classes_set.add(extract_class_num(classes))
+
         for entry in entries:
             teachers_set.add(entry['instructor'])
 
-    # Get filters from the query string
+        
     selected_department = request.args.get('department', '')
     selected_class = request.args.get('class', '')
     selected_teacher = request.args.get('teacher', '')
 
-    # Filter results
-    # ISSUES WITH FILTERING RESULTS
+    # Filter ultsres
+    # ISSUES WITH FILTERING RESULTS, make changes to handle 
     results = []
     for classes, entries in data.items():
-        if selected_department and not classes.startswith(selected_department):
+        department = extract_department(classes)
+        class_num = extract_class_num(classes)
+        if selected_department and not department:
             continue
-        if selected_class and classes != selected_class:
+        if selected_class and not class_num:
             continue
 
         for entry in entries:
-            if selected_teacher and entry['instructor'] != selected_teacher:
+            if selected_teacher and not entry['instructor']:
                 continue
 
             # append results but only append a percentage. WILL PROBABLY CHANGE TO STORE ALL GRADES
@@ -88,7 +107,7 @@ def user_page():
     return render_template(
         'user_page.html',
         departments=sorted(departments_set),
-        classes=sorted(classes),
+        classes=sorted(classes_set),
         teachers=sorted(teachers_set),
         results=results
     )
