@@ -25,10 +25,6 @@ def extract_department(class_code):
     return class_code[:2]
 
 
-@app.route('/test', methods=['GET'])
-def admin_page():
-    return render_template('test_frontend.html')
-
 @app.route('/admin', methods=['GET'])
 def admin_page():
     return render_template('admin_page.html')
@@ -91,9 +87,9 @@ def user_page():
 
     return render_template(
         'user_page.html',
-        departments_set=sorted(departments_set),
-        classes_set=sorted(classes),
-        teachers_set=sorted(teachers_set),
+        departments=sorted(departments_set),
+        classes=sorted(classes),
+        teachers=sorted(teachers_set),
         results=results
     )
 
