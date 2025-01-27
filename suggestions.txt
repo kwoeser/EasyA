@@ -1,0 +1,52 @@
+Webpage Functionality Presentation
+
+User Page Functionality: Basic Description
+
+The user page allows users to interact with the grade distribution data. Users can filter results based on selected criteria, including class, department, and teacher. Dropdown menus dynamically populate with available options from the database, ensuring accurate and relevant filtering. Once filters are applied, the results section displays the relevant grade data, enabling users to easily identify trends or comparisons. This page is designed for simplicity and accessibility, focusing on providing clear and actionable insights into the data.
+
+User Page Functionality: AJAX-Enhanced Description
+
+The AJAX-enhanced version of the user page improves usability by eliminating the need for full-page reloads when applying filters. Users interact with dropdown menus to choose their filtering criteria. Upon submitting the form, an AJAX request sends the filters to the server, dynamically updating the results section. This seamless interaction provides an updated grade distribution graph directly under the results section without disrupting the user’s workflow. The page maintains a fluid and responsive experience, ensuring users can efficiently explore the data.
+
+Admin Page Functionality: Basic Description
+
+The basic version of the admin page allows administrators to upload grade data via a simple file submission form. Administrators can select a .js file containing grade data and submit it to the server. The server processes the file, extracting and storing the data into the database. This straightforward approach ensures data updates are quick and accessible, requiring minimal technical knowledge for effective use.
+
+Admin Page Functionality: Drag-and-Drop Description
+
+The drag-and-drop version of the admin page enhances usability by providing a modern interface for data uploads. Administrators can drag a .js file directly into the designated drop zone or click to select a file. The uploaded file is validated and processed by the server, which extracts the data and updates the database. This interface streamlines the workflow for administrators, offering a more intuitive and efficient method for maintaining up-to-date grade records.
+
+Backend Requirements
+
+To support the described functionalities, the backend must include several key components:
+
+Database Management:
+
+A MongoDB instance to store and manage grade data, including fields such as class, department, teacher, and grade distribution.
+
+Queries to fetch distinct values for dropdowns and filtered results based on user input.
+
+API Endpoints:
+
+Endpoints to handle AJAX requests for user interactions, returning filtered data in JSON format.
+
+An endpoint to process file uploads, validating and parsing .js files to update the database.
+
+File Handling:
+
+Backend logic to validate the structure and content of uploaded .js files.
+
+Mechanisms to parse the files and insert or update records in the database.
+
+Security and Error Handling:
+
+Input validation for all user-provided data to prevent invalid queries or malicious uploads.
+
+Error handling for database operations, file parsing, and API requests to ensure robustness and reliability.
+
+Graph Rendering Support:
+
+Integration with a library like Chart.js or server-side rendering using Matplotlib to create visualizations for the user page.
+
+These components work together to deliver a seamless experience across the user and admin pages, ensuring the system remains functional, responsive, and secure.
+
