@@ -1,7 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
+import json
+import csv
+import os
 
-url = "https://web.archive.org/web/20140901091007/http://catalog.uoregon.edu/arts_sciences/"
+MainUrl = "https://web.archive.org/web/20140901091007/http://catalog.uoregon.edu/arts_sciences/"
+baseUrl = "https://web.archive.org"
+grade_data = os.path.join(os.path.dirname(__file__), "gradedata.js")
+output = os.path.join(os.path.dirname(__file__), "output")
+os.makedirs(output, exist_ok=True)
+
 
 """
 Extract the faculty names
@@ -15,24 +23,21 @@ so you can see how your data resolving process needs to be further improved.)
 """
 
 # Send a GET request to the webpage
-response = requests.get(url)
-if response.status_code == 200:
-    # Parse the content with BeautifulSoup
-    soup = BeautifulSoup(response.content, 'html.parser')
-    
-    # Find and extract faculty names (modify the tag/class based on the actual structure)
-    # For demonstration, assume names are in <li> under a specific class or section
-    # faculty_list = soup.find_all('li')  # Adjust this to target the specific structure
 
-    
-    # Find all elements with the class "facultylist"
-    faculty_elements = soup.find_all(class_="facultylist")
-    
-    # Process and print the faculty names
-    for faculty in faculty_elements:
-        name = faculty.get_text(strip=True)
-        if name:
-            print(name)
+def get_catalog(url):
+    response = requests.get(url)
+    if response.status_code != 200:
+        raise Exception(f"Could not load the main page. {response.status_code}")
+    soup = BeautifulSoup(response.content, "html.parser")
+    catalogs = [a["href"] for a in soup.find_all("a", href=True) if "arts_sciences/" in a["href"]]
 
-else:
-    print(f"Failed to access the webpage. Status code: {response.status_code}")
+    links = [baseUrl + link for link in catalogs]
+
+    return links
+
+catalog_links = get_catalog(MainUrl)
+
+for link in catalog_links:
+    print(link)
+
+
