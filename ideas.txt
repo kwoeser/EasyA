@@ -1,0 +1,17 @@
+
+    order data from highest to lowest
+    some sort of A,B,C,D,F sorting button that will show 
+    worst class grades or best
+
+
+    Mongo Schema:
+    Each document should represent a class entry with the following fields:
+
+    class_code: The class code "Math 111"
+    department: The department extracted from class_code.
+    term: The term or semester "Spring 2014".
+    # MAYBE ONLY USE A PERC
+    aprec, bprec, cprec, dprec, fprec: Percentages for grades A, B, C, D, and F.
+    teacher: teachers's full name.
+
+ 

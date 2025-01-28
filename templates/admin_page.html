@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Admin Support</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>Admin Support - Upload Data</h1>
+
+        <!-- File Upload Form -->
+        <!-- will update with drag and drop features when database is ready-->
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                {{ form.file.label(class="form-label") }}
+                {{ form.file(class="form-control") }}
+            </div>
+            <div class="mb-3">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</body>
+</html>
