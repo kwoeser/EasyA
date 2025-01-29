@@ -54,7 +54,7 @@ def get_faculty(url):
 
 def scrape_faculty(catalog_links):
     faculty = {}
-    with ThreadPoolExecutor(max_workers=5) as executor:  # Adjust `max_workers` to control concurrency
+    with ThreadPoolExecutor(max_workers=5) as executor:
         future_to_link = {executor.submit(get_faculty, link): link for link in catalog_links}
         for future in as_completed(future_to_link):
             link = future_to_link[future]
