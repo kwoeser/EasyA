@@ -1,8 +1,6 @@
-flask
-flask-cors
-matplotlib
-pandas
-pymongo (have mongodb installed as well)
+Flask==2.3.3
+Flask-PyMongo==2.3.0
+Werkzeug==2.3.7
+PyMongo==4.4.0
 requests
 beautifulsoup4
-
