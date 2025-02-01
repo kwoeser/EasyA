@@ -1,118 +1,148 @@
-from flask import Flask, request, send_file, render_template
+import requests
+import re
 import json
+import time
+from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_pymongo import PyMongo
+from data_loader import DataLoader
+from scrap import run_scraper
+from config import Config
 
+
+# Init flask app and configure MongoDB connection
 app = Flask(__name__)
-
-# Handle loading grade data
-DATA_FILE = "gradedata.json"
-def load_grade_data():
-    try:
-        with open(DATA_FILE, "r") as file:
-            data = json.load(file)  
-        return data
-    
-    except FileNotFoundError:
-        return {"error": f"File {DATA_FILE} not found"}
-    except json.JSONDecodeError:
-        return {"error": "Invalid JSON format in the file"}
+app.config.from_object(Config)
+mongo = PyMongo(app)
 
 
-def extract_department(class_code):
-    # extract the department name from the class code, stop when you run into the first character.
-    # return all the characters before the first number
+# All the departments
+NATURAL_SCIENCES_DEPARTMENTS = {
+    "BI": "Biology", 
+    "CH": "Chemistry", 
+    "CIS": "Computer and Information Science",
+    "GEOL": "Earth Science", 
+    "GEN SCI": "General Science Program", 
+    "HPHY": "Human Physiology",
+    "MATH": "Mathematics", 
+    "NEURO": "Neuroscience", 
+    "PHYS": "Physics", 
+    "PSY": "Psychology"
+}
 
-    for i, char in enumerate(class_code):
-        if char.isdigit():
-            return class_code[:i]  
-        
-    # print(extract_department("MATH111")) 
-    return class_code  
+# Init the data processor with the database and departments 
+data_processor = DataLoader(mongo.db, NATURAL_SCIENCES_DEPARTMENTS)
 
-def extract_class_num(class_code):
-    # extract the class number from the class code
-    # return everything after then characters end and only the numbers
-
-    for i, char in enumerate(class_code):
-        if char.isdigit():
-            return class_code[i:]  
-
-    return 
-
-
-
-@app.route('/admin', methods=['GET'])
+# Admin page
+@app.route("/admin")
 def admin_page():
-    return render_template('admin_page.html')
-
-# Adding data
-# @app.route('/admin', methods=['POST'])
-# def admin_page():
-#     return render_template('admin_page.html')
-
-# Deleting data
-# @app.route('/admin', methods=['DELETE'])
-# def admin_page():
-#     return render_template('admin_page.html')
+    return render_template("admin_page.html")
 
 
-# WAS RUNNING BUT ERROR
-# User page and index page 
-@app.route('/', methods=['GET'])
+# User page, handles requests to display course info
+@app.route("/user")
 def user_page():
-    data = load_grade_data()
+    try:
+        # Grab course and instructor names from the database
+        courses_in_database = mongo.db.grades.distinct("course")
+        instructors_in_database = mongo.db.grades.distinct("instructor")
 
-    # Store and populate dropdown data
-    departments_set = set()
-    classes_set = set()
-    teachers_set = set()
+        # Format and extracts instructor, departments and classe, funcs from data_loader.py
+        cleaned_instructor_names = data_processor.clean_instructor_names(instructors_in_database)
+        department_options, class_options = data_processor.extract_departments_and_classes(courses_in_database)
 
-    for classes, entries in data.items():
-        # Department is the first 3 characters
-        # Maybe issues beause all departments aren't 3 characters? AA is issue
-        # print(extract_department("MATH111")) 
-        departments_set.add(extract_department(classes))  
-        classes_set.add(extract_class_num(classes))
-
-        for entry in entries:
-            teachers_set.add(entry['instructor'])
-
+        selected_department = request.args.get("department", "")
+        selected_class = request.args.get("class", "")
+        selected_instructor = request.args.get("teacher", "")
         
-    selected_department = request.args.get('department', '')
-    selected_class = request.args.get('class', '')
-    selected_teacher = request.args.get('teacher', '')
+        # Build query based on requests and find the matching results 
+        query = build_course_query(selected_department, selected_class, selected_instructor)
+        results = list(mongo.db.grades.find(query).limit(100))
 
-    # Filter ultsres
-    # ISSUES WITH FILTERING RESULTS, make changes to handle 
-    results = []
-    for classes, entries in data.items():
-        department = extract_department(classes)
-        class_num = extract_class_num(classes)
-        if selected_department and not department:
-            continue
-        if selected_class and not class_num:
-            continue
-
-        for entry in entries:
-            if selected_teacher and not entry['instructor']:
-                continue
-
-            # append results but only append a percentage. WILL PROBABLY CHANGE TO STORE ALL GRADES
-            results.append({
-                'class': classes,
-                'teacher': entry['instructor'],
-                'percent_a': entry['aprec'],
-                'term': entry['TERM_DESC']
-            })
-
-    return render_template(
-        'user_page.html',
-        departments=sorted(departments_set),
-        classes=sorted(classes_set),
-        teachers=sorted(teachers_set),
-        results=results
-    )
+        return render_template(
+            "user_page.html",
+            departments=department_options,
+            classes=class_options,
+            teachers=sorted(cleaned_instructor_names),
+            results=results,
+            request=request
+        )
+    
+    except Exception as e:
+        return f"User Page Error: {e}", 500
+    
 
 
+# Load js data, extract the JSON and insert it into the database
+@app.route("/load_remote_js", methods=["POST"])
+def load_remote_js():
+    try:
+        # Get the file URL from user input on admin page
+        file_url = request.form.get("file_url")
+        if not file_url or not file_url.startswith("http"):
+            flash("Invalid file URL provided.", "danger")
+            return redirect(url_for("admin_page"))
+        
+        response = requests.get(file_url, timeout=10)
+        response.raise_for_status()
+        content = response.text.strip()
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        # Grab the JSON data 
+        match = re.search(r'var\s+groups\s*=\s*({.*?});', content, re.DOTALL)
+        if not match:
+            flash("Could not extract JSON data from the remote file.", "danger")
+            return redirect(url_for("admin_page"))
+
+        # Format the JSON data for the database
+        groups = json.loads(match.group(1))
+        records = data_processor.transform_course_data(groups)
+
+        # Clear existing data dn insert new data into records 
+        if records:
+            mongo.db.grades.delete_many({})
+            mongo.db.grades.insert_many(records)
+            flash(f"Database successfully populated with {len(records)} records!", "success")
+        else:
+            flash("No valid data to insert.", "warning")
+
+    except Exception as e:
+        flash(f"An error occurred: {str(e)}", "danger")
+
+    time.sleep(3)
+    return redirect(url_for("admin_page"))
+
+
+# Scrape faculty data and insert/update it in the database
+@app.route("/scrape_faculty", methods=["POST"])
+def scrape_faculty():
+    try:
+        # Run the scraper to get faculty data then insert to db
+        faculty_data = run_scraper()
+        data_processor.insert_faculty_data(faculty_data)
+
+    except Exception as e:
+        flash(f"An error occurred during faculty scraping: {e}", "danger")
+
+    return redirect(url_for("admin_page"))
+
+
+# Clears database of all records from the grades and faculty collections
+@app.route("/clear_database", methods=["POST"])
+def clear_database():
+    data_processor.clear_all_collections()
+    return redirect(url_for("admin_page"))
+
+
+# Build mongodb query based on the selected filters
+def build_course_query(department, course_class, instructor):
+    query = {}
+    if department:
+        query["course"] = {'$regex': f'^{department}'}
+    if course_class:
+        query["course"] = {'$regex': f'{course_class}$'}
+    if instructor:
+        query["instructor"] = instructor
+    return query
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000, debug=False)
