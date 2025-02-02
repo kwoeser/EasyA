@@ -5,12 +5,15 @@ EasyA is a web based application designed to help students analyze the grading h
 Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose.
 You can find the classes that have the highest chance of giving you an A. This project was made for CS 422.
 
+### Features
 
----
 
 ### Project Structure
-### Features
+
 ### Installation and Setup
+steps to set up the project using Docker and MongoDB.
 docker-compose up --build
 
-### Credit
+### Contributors
+
+
