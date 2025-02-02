@@ -65,6 +65,16 @@
         
         
         
+        {% if results %}
+            <h3>Matching Classes</h3>
+            <ul>
+                {% for result in results %}
+                    <li>{{ result.course }} - Instructor: {{ result.instructor }} - Term: {{ result.term }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No matching classes found.</p>
+        {% endif %}
         
         <!-- Results Section -->
         <!-- Under Construction -->

@@ -38,11 +38,11 @@ def admin_page():
     return render_template("admin_page.html")
 
 
-# User page, handles requests to display course info
+# # User page, handles requests to display course info
 @app.route("/user")
 def user_page():
     try:
-        # Grab course and instructor names from the database
+        # grab course and instructor names from the database
         courses_in_database = mongo.db.grades.distinct("course")
         instructors_in_database = mongo.db.grades.distinct("instructor")
         print("Courses in database:", courses_in_database)
@@ -56,9 +56,17 @@ def user_page():
         selected_class = request.args.get("class", "")
         selected_instructor = request.args.get("teacher", "")
         
-        # Build query based on requests and find the matching results 
+        # build query based on requests and find the matching results 
         query = build_course_query(selected_department, selected_class, selected_instructor)
+        print("Query has been built:", query)  
         results = list(mongo.db.grades.find(query).limit(100))
+
+
+        # check if results are empty
+        # results are empty??
+        if len(results) == 0:
+            print("No matching classes founds.")
+
 
         return render_template(
             "user_page.html",
@@ -71,7 +79,9 @@ def user_page():
     
     except Exception as e:
         return f"User Page Error: {e}", 500
-    
+
+
+
 
 
 # Load js data, extract the JSON and insert it into the database
@@ -94,7 +104,7 @@ def load_remote_js():
             flash("Could not extract JSON data from the remote file.", "danger")
             return redirect(url_for("admin_page"))
 
-        # Format the JSON data for the database
+        # format the JSON data for the database
         groups = json.loads(match.group(1))
         records = data_processor.transform_course_data(groups)
 
@@ -119,7 +129,7 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
-        print("Scraped Data:", faculty_data)  
+        # print("Scraped Data:", faculty_data)  
 
         data_processor.insert_faculty_data(faculty_data)
 
@@ -139,13 +149,28 @@ def clear_database():
 # Build mongodb query based on the selected filters
 def build_course_query(department, course_class, instructor):
     query = {}
-    if department:
-        query["course"] = {'$regex': f'^{department}'}
-    if course_class:
+    
+    # Map the full actual department name back to its code for query
+    # Otherwise the results won't show on user page
+    department_code = None
+    for code, full_name in NATURAL_SCIENCES_DEPARTMENTS.items():
+        if full_name == department:
+            department_code = code
+            break
+
+    # course "MATH111" match with actual name
+    if department_code and course_class:
+        query["course"] = f'{department_code}{course_class}'
+    elif department_code:
+        query["course"] = {'$regex': f'^{department_code}'}
+    elif course_class:
         query["course"] = {'$regex': f'{course_class}$'}
-    if instructor:
+    elif instructor:
         query["instructor"] = instructor
+    
     return query
+
+
 
 
 if __name__ == "__main__":
