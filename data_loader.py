@@ -34,6 +34,7 @@ class DataLoader:
             # Matches the department name and class number
             dept_match = re.findall(r'^[A-Za-z]+', course)
             num_match = re.findall(r'\d+', course)
+            print(f"Extracting department and class from: {course}, Dept Match: {dept_match}, Class Match: {num_match}")
 
             if dept_match and dept_match[0] in self.NATURAL_SCIENCES_DEPARTMENTS:
                 departments.add(self.NATURAL_SCIENCES_DEPARTMENTS[dept_match[0]])
@@ -90,8 +91,11 @@ class DataLoader:
     def insert_faculty_data(self, faculty_data):
         # Inserting multiple UpdateOne operations into the database from one bulk operations list
         bulk_operations = []
+        bulk_grade_ops = []
 
         for entry in faculty_data:
+            # print("Inserting entry:", entry)
+            print("INSERTING COURSE:", entry.get("course"))
             bulk_operations.append(
                 UpdateOne(
                     {"name": entry["name"], "department": entry["department"], "course_number": entry["course_number"]},
@@ -100,11 +104,36 @@ class DataLoader:
                 )
             )
 
+            # update the grades collection if course information is tied to faculty.
+            # Construct course name properly and insert into grades collection
+            # Fixes the scraper dropdown data not appearing on user page
+            course = entry["department"] + entry["course_number"]
+            if course.strip():
+                bulk_grade_ops.append(
+                    UpdateOne(
+                        {"course": course, "instructor": entry["name"]},
+                        {
+                            "$setOnInsert": {
+                                "term": entry.get("term", ""),
+                                "instructor": entry["name"]
+                            }
+                        },
+                        upsert=True
+                    )
+                )
+
+        # Faculty records
         if bulk_operations:
             self.db.faculty.bulk_write(bulk_operations, ordered=False)
             flash(f"Successfully merged {len(bulk_operations)} faculty records.", "success")
         else:
             flash("No faculty data found.", "warning")
+
+     
+        if bulk_grade_ops:
+            self.db.grades.bulk_write(bulk_grade_ops, ordered=False)
+
+
 
     # Clears the database
     def clear_all_collections(self):

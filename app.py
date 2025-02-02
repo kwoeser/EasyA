@@ -45,6 +45,8 @@ def user_page():
         # Grab course and instructor names from the database
         courses_in_database = mongo.db.grades.distinct("course")
         instructors_in_database = mongo.db.grades.distinct("instructor")
+        print("Courses in database:", courses_in_database)
+        print("Instructors in database:", instructors_in_database)  
 
         # Format and extracts instructor, departments and classe, funcs from data_loader.py
         cleaned_instructor_names = data_processor.clean_instructor_names(instructors_in_database)
@@ -117,6 +119,8 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
+        print("Scraped Data:", faculty_data)  
+
         data_processor.insert_faculty_data(faculty_data)
 
     except Exception as e:
