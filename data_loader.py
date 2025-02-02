@@ -1,5 +1,5 @@
 import re
-from pymongo import UpdateOne
+from pymongo import UpdateOne 
 from flask import flash
 
 class DataLoader:
@@ -13,39 +13,35 @@ class DataLoader:
     def clean_instructor_names(self, instructor_list):
         clean_names = set()
         for instructor in instructor_list:
-            try:
-                cleaned_name = instructor.strip()
-                match = re.match(r"^(\S+),\s*(\S+)(?:\s+(\S+))?", cleaned_name)
+            cleaned_name = instructor.strip()
+            match = re.match(r"^(\S+),\s*(\S+)(?:\s+(\S+))?", cleaned_name)
 
-                if match:
-                    last_name, first_name, middle_name = match.groups()
-                    formatted_name = f"{last_name}, {first_name} {middle_name or ''}".strip()
-                    clean_names.add(formatted_name)
-                else:
-                    clean_names.add(cleaned_name)
-            except Exception as e:
-                print(f"Error processing instructor '{instructor}': {e}")
+            if match:
+                last_name, first_name, middle_name = match.groups()
+                formatted_name = f"{last_name}, {first_name} {middle_name or ''}".strip()
+                clean_names.add(formatted_name)
+            else:
+                clean_names.add(cleaned_name)
 
         return clean_names
+
 
     # Extract the department name and class number from the class code
     # Uses regex instead of our previous method
     def extract_departments_and_classes(self, course_list):
         departments, classes = set(), set()
         for course in course_list:
-            # Match department prefix (letters) and class number (digits)
-            dept_match = re.match(r'^([A-Z]+)', course)
-            num_match = re.search(r'(\d+)', course)
+            # Matches the department name and class number
+            dept_match = re.findall(r'^[A-Za-z]+', course)
+            num_match = re.findall(r'\d+', course)
 
-            if dept_match:
-                dept_code = dept_match.group(1)
-                # Filter only Natural Sciences based on known department codes
-                if dept_code in self.NATURAL_SCIENCES_DEPARTMENTS:
-                    departments.add(self.NATURAL_SCIENCES_DEPARTMENTS[dept_code])
-                    if num_match:
-                        classes.add(num_match.group(1))
+            if dept_match and dept_match[0] in self.NATURAL_SCIENCES_DEPARTMENTS:
+                departments.add(self.NATURAL_SCIENCES_DEPARTMENTS[dept_match[0]])
+                if num_match:
+                    classes.add(int(num_match[0]))
 
         return sorted(departments), sorted(classes)
+
 
     # Transforms the JSON course data that will be inputed from the admin page to be compatiable for the database 
     def transform_course_data(self, groups):
@@ -64,95 +60,93 @@ class DataLoader:
                     "fprec": float(entry.get("fprec", 0.0)),
                     "instructor": entry.get("instructor", "Unknown"),
                 })
-
+                
         return records
-
-    def extract_department(self, class_code):
+    
+    def extract_department(class_code):
         # Extract the department name from the class code, stop when you run into the first character.
         # return all the characters before the first number
         for i, char in enumerate(class_code):
             if char.isdigit():
                 return class_code[:i]  
-
+            
+        # print(extract_department("MATH111")) 
         return class_code  
 
-    def extract_class_num(self, class_code):
+    def extract_class_num(class_code):
         # Extract the class number from the class code
-        # return everything after the characters end and only the numbers
+        # return everything after then characters end and only the numbers
         for i, char in enumerate(class_code):
             if char.isdigit():
                 return class_code[i:]  
 
-        return None
+        return 
+    
 
     # DATABASE SECTION
     # INSERTING SCRAPING DATA TO DATABASE 
+    
     # ISSUES WITH INSERTING SCRAPED
     def insert_faculty_data(self, faculty_data):
-        BATCH_SIZE = 1000  # Insert in batches of 1000
         bulk_operations = []
-        missing_fields_count = 0
-        total_inserted = 0
 
-        for i, entry in enumerate(faculty_data):
-            if all(key in entry for key in ["name", "department", "course_number"]):
-                bulk_operations.append(
-                    UpdateOne(
-                        {"name": entry["name"], "department": entry["department"], "course_number": entry["course_number"]},
-                        {"$set": entry},
-                        upsert=True
-                    )
+        for entry in faculty_data:
+            # Safely fetch the 'course_number' if it exists, otherwise None
+            course_num = entry.get("course_number", None)
+            name = entry["name"]
+            department = entry["department"]
+
+            bulk_operations.append(
+                UpdateOne(
+                    {
+                        "name": name,
+                        "department": department,
+                        # Matches if 'course_number' is present, otherwise None
+                        "course_number": course_num
+                    },
+                    {
+                        "$set": {
+                            "name": name,
+                            "department": department,
+                            "course_number": course_num
+                        }
+                    },
+                    upsert=True
                 )
-            else:
-                missing_fields_count += 1
-
-            if len(bulk_operations) >= BATCH_SIZE:
-                result = self.db.faculty.bulk_write(bulk_operations, ordered=False)
-                total_inserted += result.upserted_count or 0
-                bulk_operations = []  # Clear batch after insert
+            )
 
         if bulk_operations:
-            result = self.db.faculty.bulk_write(bulk_operations, ordered=False)
-            total_inserted += result.upserted_count or 0
+            self.db.faculty.bulk_write(bulk_operations, ordered=False)
+            flash(f"Successfully merged {len(bulk_operations)} faculty records.", "success")
+        else:
+            flash("No faculty data found.", "warning")
 
-        flash(f"Successfully merged {total_inserted} faculty records.", "success")
-
-        if missing_fields_count:
-            print(f"Skipped {missing_fields_count} entries due to missing required fields.")
 
     def merge_faculty_with_grades(self):
-        """
-        Merge faculty data with grades collection based on department and instructor name.
-        """
-        faculty_records = list(self.db.faculty.find())
-        bulk_operations = []
-
-        for faculty in faculty_records:
-            name = faculty.get("name")
-            department = faculty.get("department")
-            course_number = faculty.get("course_number")
-
-            if name and department and course_number:
-                course_code_pattern = f"{department}{course_number}"  # e.g., CIS210
-
-                # Update grade records matching the department, course number, and instructor name
-                bulk_operations.append(
+        # Merges faculty data into the grades collection by matching on instructor name.
+        # Copies department (and course_number if present) from faculty into the grades record.
+        
+        try:
+            faculty_records = list(self.db.faculty.find())
+            updates = []
+            for record in faculty_records:
+                name = record["name"]
+                department = record.get("department", None)
+                course_num = record.get("course_number", None)
+                updates.append(
                     UpdateOne(
-                        {
-                            "course": {"$regex": f"^{course_code_pattern}"},
-                            "instructor": {"$regex": f"^{name}"}
-                        },
-                        {"$set": {"department": department, "instructor": name}},
+                        {"instructor": name},
+                        {"$set": {"department": department, "course_number": course_num}},
                         upsert=False
                     )
                 )
-
-        if bulk_operations:
-            result = self.db.grades.bulk_write(bulk_operations, ordered=False)
-            print(f"Successfully merged {result.modified_count} grade records with faculty data.")
-        else:
-            print("No matching records found for merging.")
-
+            if updates:
+                result = self.db.grades.bulk_write(updates, ordered=False)
+                flash(f"Merged {result.modified_count} grade records with faculty data.", "success")
+            else:
+                flash("No matching records found for merging.", "info")
+        except Exception as e:
+            flash(f"Error merging faculty with grades: {e}", "danger")
 
 
     # Clears the database
@@ -166,3 +160,11 @@ class DataLoader:
             flash(f"Cleared {grades_count} grade records and {faculty_count} faculty records.", "success")
         except Exception as e:
             flash(f"An error occurred while clearing the database: {e}", "danger")
+
+
+
+
+
+# class DatabaseManager:
+#     def __init__(self, db):
+#             self.db = db

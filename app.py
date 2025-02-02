@@ -70,64 +70,84 @@ def admin_page():
 @app.route("/user")
 def user_page():
     try:
-        # Filter pattern for natural science courses
-        pattern = f'^({"|".join(NATURAL_SCIENCES_DEPARTMENTS.keys())})'
+        department = request.args.get("department", "")
+        single_class = request.args.get("class", "")
+        instructor_type = request.args.get("faculty_type", "all")
+        grade_view = request.args.get("grade_view", "easyA")
 
-        # Fetch distinct courses and instructors for natural science departments
-        courses = mongo.db.grades.distinct("course", {"course": {"$regex": pattern}})
-        instructors = mongo.db.grades.distinct("instructor", {"course": {"$regex": pattern}})
+        query = {}
+        if department:
+            query["course"] = {"$regex": f"^{department}"}
+        if single_class:
+            query["course"] = single_class
 
-        # Clean data
-        cleaned_instructors = data_processor.clean_instructor_names(instructors)
-        departments, classes = data_processor.extract_departments_and_classes(courses)
+        natural_sciences_abbrevs = NATURAL_SCIENCES_DEPARTMENTS.keys()
 
-        # Map teachers and classes by department
-        teachers_by_department = {
-            dept: mongo.db.grades.distinct("instructor", {"course": {"$regex": f'^{dept}'}})
-            for dept in NATURAL_SCIENCES_DEPARTMENTS.keys()
+        natural_science_classes = mongo.db.grades.distinct(
+            "course", {"course": {"$regex": f"^({'|'.join(natural_sciences_abbrevs)})"}}
+        )
+        natural_science_teachers = mongo.db.grades.distinct(
+            "instructor", {"course": {"$regex": f"^({'|'.join(natural_sciences_abbrevs)})"}}
+        )
+
+        # Build mappings
+        teacher_department_map = {
+            doc.get("instructor", "Unknown"): doc.get("department", "Unknown")
+            for doc in mongo.db.faculty.find({}, {"instructor": 1, "department": 1})
         }
 
-        classes_by_department = {
-            dept: mongo.db.grades.distinct("course", {"course": {"$regex": f'^{dept}'}})
-            for dept in NATURAL_SCIENCES_DEPARTMENTS.keys()
-        }
-        classes_by_teacher = {
-            teacher: mongo.db.grades.distinct("course", {"instructor": teacher})
-            for teacher in cleaned_instructors
+        teacher_classes_map = {
+            teacher: list(mongo.db.grades.distinct("course", {"instructor": teacher}))
+            for teacher in natural_science_teachers
         }
 
-        # Apply filters
-        selected_department = request.args.get("department", "")
-        selected_class = request.args.get("class", "")
-        selected_instructor = request.args.get("teacher", "")
+        class_department_map = {
+            course: course[:4]  # Assuming first 4 chars represent department (e.g., CIS101)
+            for course in natural_science_classes
+        }
 
-        query = build_course_query(selected_department, selected_class, selected_instructor)
-        results = list(mongo.db.grades.find(query).limit(100))
+        class_teachers_map = {
+            course: list(mongo.db.grades.distinct("instructor", {"course": course}))
+            for course in natural_science_classes
+        }
 
-        # Calculate average A grades
-        instructor_data = {}
-        for result in results:
-            instructor = result.get("instructor", "Unknown")
-            aprec = float(result.get("aprec", 0))
-            instructor_data.setdefault(instructor, []).append(aprec)
+        # Graph Data
+        results = list(mongo.db.grades.find(query))
+        data_by_instructor = {}
+        for r in results:
+            instructor = r.get("instructor", "Unknown")  
+            data_by_instructor.setdefault(instructor, {"count": 0, "sum": 0.0})
 
-        averaged_data = [{"instructor": k, "aprec": sum(v) / len(v)} for k, v in instructor_data.items()]
+            if grade_view == "easyA":
+                data_by_instructor[instructor]["sum"] += r.get("aprec", 0.0)
+            else:
+                data_by_instructor[instructor]["sum"] += r.get("dprec", 0.0) + r.get("fprec", 0.0)
+
+            data_by_instructor[instructor]["count"] += 1
+
+        graph_data = [
+            {"instructor": instructor, "value": info["sum"] / info["count"]}
+            for instructor, info in data_by_instructor.items()
+        ]
+
+        graph_data.sort(key=lambda x: x["value"], reverse=True)
 
         return render_template(
             "user_page.html",
-            departments=NATURAL_SCIENCES_DEPARTMENTS.values(),
-            classes=classes,
-            teachers=sorted(cleaned_instructors),
-            teachers_by_department=teachers_by_department,
-            classes_by_department=classes_by_department,
-            classes_by_teacher=classes_by_teacher,
-            grade_data=averaged_data if request.args else None,  # Only pass grade data if filters are applied
-            request=request
+            graph_data=graph_data if request.args else [],
+            departments=NATURAL_SCIENCES_DEPARTMENTS.keys(),
+            teachers=natural_science_teachers,
+            classes=natural_science_classes,
+            teacher_department_map=teacher_department_map,
+            teacher_classes_map=teacher_classes_map,
+            class_department_map=class_department_map,
+            class_teachers_map=class_teachers_map,
         )
 
     except Exception as e:
         print(f"Error: {e}")
-        return f"User Page Error: {e}", 500
+        return str(e), 500
+
 
 
 
@@ -178,6 +198,8 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
+        print("Scraped Data:", faculty_data)  
+
         data_processor.insert_faculty_data(faculty_data)
 
     except Exception as e:

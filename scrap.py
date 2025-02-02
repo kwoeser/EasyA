@@ -50,7 +50,7 @@ session = requests_retry_session()
 
 # Function to format names as "Last, First Middle"
 def format_name(name):
-    parts = name.split()
+    parts = name.strip().split()
     if len(parts) >= 2:
         return f"{parts[-1]}, {' '.join(parts[:-1])}"
     return name  # Return as-is if it's a single name
@@ -70,7 +70,7 @@ def get_catalog(url):
         filtered_links = {}
         for link in links:
             for dept_code, dept_name in NATURAL_SCIENCES_DEPARTMENTS:
-                if dept_code.replace(" ", "").lower() in link.replace(" ", "").lower():
+                if dept_name.replace(" ", "").lower() in link.replace(" ", "").lower():
                     filtered_links[link] = dept_code
                     break
 
@@ -82,7 +82,7 @@ def get_catalog(url):
 # Extract faculty names from a department page
 def get_faculty(url, department_code):
     try:
-        print(f"📡 Fetching: {url}")
+        print(f"Fetching: {url}")
         response = session.get(url, timeout=10)
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
@@ -93,62 +93,48 @@ def get_faculty(url, department_code):
         for p in soup.find_all("p"):
             matches = faculty_pattern.findall(p.get_text())
             for match in matches:
-                formatted_name = format_name(match[0].strip())
+                formatted_name = format_name(match[0])
                 faculty_names.add(formatted_name)
 
         if not faculty_names:
-            print(f"⚠️ No faculty found in {url}, skipping department.")
+            print(f"No faculty found in {url}, skipping department.")
             return []
 
         faculty_data = [{"name": name, "department": department_code} for name in faculty_names]
 
-        print(f"✅ Extracted {len(faculty_names)} faculty members from {url}")
+        print(f"Extracted {len(faculty_names)} faculty members from {url}")
         return faculty_data
 
     except Exception as e:
-        print(f"❌ Error scraping {url}: {e}")
+        print(f"Error scraping {url}: {e}")
         return []
 
 # Scrape faculty data from filtered catalog links
-def scrape_faculty(catalog_links):
+def scrape_faculty():
     faculty = []
-    processed_departments = set()
+    catalog_links = get_catalog(MainUrl)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_link = {}
-
-        for link, dept_code in catalog_links.items():
-            if dept_code in processed_departments:
-                print(f"⚠️ Skipping duplicate scraping of {dept_code}")
-                continue
-            processed_departments.add(dept_code)
-            future_to_link[executor.submit(get_faculty, link, dept_code)] = link
+        future_to_link = {executor.submit(get_faculty, link, dept_code): link for link, dept_code in catalog_links.items()}
 
         for future in as_completed(future_to_link):
             try:
                 faculty.extend(future.result())
             except Exception as e:
-                print(f"❌ Error processing {future_to_link[future]}: {e}")
+                print(f"Error processing {future_to_link[future]}: {e}")
 
     return faculty
 
 # Main function to scrape faculty data
 def run_scraper():
-    print("🕵️ Starting Scraper...")
-    catalog_links = get_catalog(MainUrl)
-    print(f"✅ Found {len(catalog_links)} relevant department links.")
-
-    if not catalog_links:
-        print("❌ No catalog links found! Check if the website structure has changed.")
-        return []
-
-    faculty_data = scrape_faculty(catalog_links)
-    print(f"📌 Scraped {len(faculty_data)} faculty entries.")
+    print("Starting Scraper...")
+    faculty_data = scrape_faculty()
+    print(f"Scraped {len(faculty_data)} faculty entries.")
 
     if not faculty_data:
-        print("⚠️ No faculty data was collected. Something might be wrong.")
+        print("No faculty data was collected. Something might be wrong.")
     else:
-        print(f"🎯 Successfully collected {len(faculty_data)} faculty records.")
+        print(f"Successfully collected {len(faculty_data)} faculty records.")
 
     return faculty_data
 
