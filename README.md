@@ -7,8 +7,8 @@ You can find the classes that have the highest chance of giving you an A. This p
 
 ### Features
 
-**User Page:**
-  The user page allows students to interact with course and instructor data through drop-down menus to filter results. The user can filter by department, class, or instructor and view the          relevant results. 
+- **User Page:**
+The user page allows students to interact with course and instructor data through drop-down menus to filter results. The user can filter by department, class, or instructor and view the relevant results. 
   
 - **Admin Page:**  
 The admin page allows the user to load, manage, and update course and faculty data. Data can be loaded by uploading remote JS data files or through a web scraper. The page also has options to clear the database and merge the data. localhost:5000/admin
