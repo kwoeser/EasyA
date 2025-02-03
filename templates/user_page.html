@@ -28,7 +28,7 @@
                 <select name="teacher" id="teacher" class="form-control">
                     <option value="">Select a Teacher</option>
                     {% for teacher in teachers %}
-                        <option value="{{ teacher }}" data-department="{{ teacher_department_map[teacher] }}" data-classes="{{ teacher_classes_map[teacher] | join(',') }}" {% if request.args.get('teacher') == teacher %}selected{% endif %}>{{ teacher }}</option>
+                    <option value="{{ teacher }}" data-department="{{ teacher_department_map[teacher] }}" data-classes="{{ teacher_classes_map[teacher] | join(';') }}" {% if request.args.get('teacher') == teacher %}selected{% endif %}>{{ teacher }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -38,7 +38,7 @@
                 <select name="class" id="class" class="form-control">
                     <option value="">Select a Class</option>
                     {% for c in classes %}
-                        <option value="{{ c }}" data-department="{{ class_department_map[c] }}" data-teachers="{{ class_teachers_map[c] | join(',') }}" {% if request.args.get('class') == c %}selected{% endif %}>{{ c }}</option>
+                    <option value="{{ c }}" data-department="{{ class_department_map[c] }}" data-teachers="{{ class_teachers_map[c] }}" {% if request.args.get('class') == c %}selected{% endif %}>{{ c }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -69,21 +69,46 @@
     $(document).ready(function () {
         function filterDropdowns() {
             const selectedDept = $('#department').val();
-            const selectedTeacher = $('#teacher').val();
+            const selectedTeacher = $('#teacher').val().trim();
+            const selectedClass = $('#class').val();
 
+            console.log("Selected Department:", selectedDept);
+            console.log("Selected Teacher:", selectedTeacher);
+            console.log("Selected Class:", selectedClass);
+
+            // Filter Teachers based on Department
             $('#teacher option').each(function () {
                 const teacherDept = $(this).data('department');
-                $(this).toggle(!selectedDept || teacherDept === selectedDept);
+                const show = (
+                    !selectedDept || teacherDept === selectedDept || $(this).val() === ''
+                );
+                $(this).toggle(show);
+
+                console.log(`Teacher: ${$(this).val()}, Dept: ${teacherDept}, Show: ${show}`);
             });
 
+            // Filter Classes based on Department and Teacher
             $('#class option').each(function () {
                 const classDept = $(this).data('department');
-                const classTeachers = ($(this).data('teachers') || "").split(',');
-                $(this).toggle((!selectedDept || classDept === selectedDept) && (!selectedTeacher || classTeachers.includes(selectedTeacher)));
+                const classTeachers = ($(this).data('teachers') || '').split(';').map(name => name.trim());
+
+                const show = (
+                    (!selectedDept || classDept === selectedDept) &&
+                    (!selectedTeacher || classTeachers.includes(selectedTeacher)) ||
+                    $(this).val() === ''
+                );
+                $(this).toggle(show);
+
+                console.log(`Class: ${$(this).val()}, Dept: ${classDept}, Teachers: ${classTeachers}, Show: ${show}`);
             });
         }
 
-        $('#department, #teacher').on('change', filterDropdowns);
+        // Apply filters on dropdown changes
+        $('#department, #teacher, #class').on('change', function () {
+            filterDropdowns();
+        });
+
+        // Initial filter when page loads
         filterDropdowns();
 
         {% if graph_data and graph_data|length > 0 %}

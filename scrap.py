@@ -62,15 +62,18 @@ def get_catalog(url):
         response.raise_for_status()
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Find department links
         catalogs = [a["href"] for a in soup.find_all("a", href=True) if "arts_sciences/" in a["href"]]
         links = [link if link.startswith("http") else baseUrl + link for link in catalogs]
 
-        # Filter to include only Natural Sciences departments
         filtered_links = {}
         for link in links:
             for dept_code, dept_name in NATURAL_SCIENCES_DEPARTMENTS:
-                if dept_name.replace(" ", "").lower() in link.replace(" ", "").lower():
+                # Special case for CIS
+                if dept_code == "CIS" and "computerandinfoscience" in link.lower():
+                    filtered_links[link] = dept_code
+                    break
+                # General case for other departments
+                elif dept_name.replace(" ", "").lower() in link.replace(" ", "").lower():
                     filtered_links[link] = dept_code
                     break
 
@@ -78,6 +81,7 @@ def get_catalog(url):
     except Exception as e:
         print(f"Could not get catalog links: {e}")
         return {}
+
 
 # Extract faculty names from a department page
 def get_faculty(url, department_code):

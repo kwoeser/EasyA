@@ -42,6 +42,14 @@ class DataLoader:
 
         return sorted(departments), sorted(classes)
 
+    # Normalize instructor names
+    def normalize_name(self, name):
+        if not name:
+            return ""
+        parts = name.strip().lower().split(',')
+        last_name = parts[0].strip().capitalize()
+        first_name = parts[1].strip().split()[0].capitalize() if len(parts) > 1 else ''
+        return f"{last_name}, {first_name}"
 
     # Transforms the JSON course data that will be inputed from the admin page to be compatiable for the database 
     def transform_course_data(self, groups):
@@ -70,7 +78,6 @@ class DataLoader:
             if char.isdigit():
                 return class_code[:i]  
             
-        # print(extract_department("MATH111")) 
         return class_code  
 
     def extract_class_num(class_code):
@@ -82,6 +89,7 @@ class DataLoader:
 
         return 
     
+    
 
     # DATABASE SECTION
     # INSERTING SCRAPING DATA TO DATABASE 
@@ -91,26 +99,14 @@ class DataLoader:
         bulk_operations = []
 
         for entry in faculty_data:
-            # Safely fetch the 'course_number' if it exists, otherwise None
             course_num = entry.get("course_number", None)
-            name = entry["name"]
-            department = entry["department"]
+            name = self.normalize_name(entry.get("name", "Unknown"))
+            department = entry.get("department", "Unknown")
 
             bulk_operations.append(
                 UpdateOne(
-                    {
-                        "name": name,
-                        "department": department,
-                        # Matches if 'course_number' is present, otherwise None
-                        "course_number": course_num
-                    },
-                    {
-                        "$set": {
-                            "name": name,
-                            "department": department,
-                            "course_number": course_num
-                        }
-                    },
+                    {"name": name, "department": department, "course_number": course_num},
+                    {"$set": {"name": name, "department": department, "course_number": course_num}},
                     upsert=True
                 )
             )
@@ -121,18 +117,36 @@ class DataLoader:
         else:
             flash("No faculty data found.", "warning")
 
+    def transform_course_data(self, groups):
+        records = []
+
+        for course, details in groups.items():
+            for entry in details:
+                instructor = self.normalize_name(entry.get("instructor", "Unknown"))
+                records.append({
+                    "course": course,
+                    "term": entry.get("TERM_DESC", ""),
+                    "aprec": float(entry.get("aprec", 0.0)),
+                    "bprec": float(entry.get("bprec", 0.0)),
+                    "cprec": float(entry.get("cprec", 0.0)),
+                    "crn": entry.get("crn", "N/A"),
+                    "dprec": float(entry.get("dprec", 0.0)),
+                    "fprec": float(entry.get("fprec", 0.0)),
+                    "instructor": instructor,
+                })
+
+        return records
 
     def merge_faculty_with_grades(self):
-        # Merges faculty data into the grades collection by matching on instructor name.
-        # Copies department (and course_number if present) from faculty into the grades record.
-        
         try:
             faculty_records = list(self.db.faculty.find())
             updates = []
+
             for record in faculty_records:
-                name = record["name"]
+                name = record["name"]  
                 department = record.get("department", None)
                 course_num = record.get("course_number", None)
+
                 updates.append(
                     UpdateOne(
                         {"instructor": name},
@@ -140,13 +154,16 @@ class DataLoader:
                         upsert=False
                     )
                 )
+
             if updates:
                 result = self.db.grades.bulk_write(updates, ordered=False)
                 flash(f"Merged {result.modified_count} grade records with faculty data.", "success")
             else:
                 flash("No matching records found for merging.", "info")
+
         except Exception as e:
             flash(f"Error merging faculty with grades: {e}", "danger")
+
 
 
     # Clears the database

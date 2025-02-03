@@ -56,8 +56,9 @@ def create_indexes():
         mongo.db.grades.create_index("course")
         mongo.db.grades.create_index("instructor")
         mongo.db.grades.create_index([("course", 1), ("instructor", 1)])  # Compound index
-        mongo.db.grades.create_index("department")
-        app.indexes_created = True  # Ensure it's only done once
+        mongo.db.faculty.create_index("department")  # Add index for faculty department
+        mongo.db.faculty.create_index("instructor")  # Add index for instructor name
+        app.indexes_created = True
         print("Indexes created successfully.")
 
 
@@ -74,40 +75,49 @@ def user_page():
         single_class = request.args.get("class", "")
         instructor_type = request.args.get("faculty_type", "all")
         grade_view = request.args.get("grade_view", "easyA")
+        selected_teacher = request.args.get("teacher", "")  #Add this line to capture selected teacher
+
+        # Auto-select department based on the selected teacher if not already chosen
+        if selected_teacher and not department:
+            teacher_dept = mongo.db.faculty.find_one({"instructor": selected_teacher}, {"department": 1})
+            if teacher_dept:
+                department = teacher_dept.get("department", "")
 
         query = {}
         if department:
             query["course"] = {"$regex": f"^{department}"}
         if single_class:
             query["course"] = single_class
+        if selected_teacher:  #Add this condition to filter by teacher
+            query["instructor"] = selected_teacher
 
         natural_sciences_abbrevs = NATURAL_SCIENCES_DEPARTMENTS.keys()
 
         natural_science_classes = mongo.db.grades.distinct(
             "course", {"course": {"$regex": f"^({'|'.join(natural_sciences_abbrevs)})"}}
         )
-        natural_science_teachers = mongo.db.grades.distinct(
-            "instructor", {"course": {"$regex": f"^({'|'.join(natural_sciences_abbrevs)})"}}
-        )
+        natural_science_teachers = mongo.db.faculty.distinct("name")
 
         # Build mappings
-        teacher_department_map = {
-            doc.get("instructor", "Unknown"): doc.get("department", "Unknown")
-            for doc in mongo.db.faculty.find({}, {"instructor": 1, "department": 1})
-        }
+       
+        teacher_department_map = {}
+        for doc in mongo.db.faculty.find({}, {"name": 1, "department": 1}):
+            instructor_name = doc.get("name", "Unknown")
+            department = doc.get("department", "Unknown")
+            teacher_department_map[instructor_name] = department
 
         teacher_classes_map = {
-            teacher: list(mongo.db.grades.distinct("course", {"instructor": teacher}))
+            teacher: ';'.join(str(course) for course in mongo.db.grades.distinct("course", {"instructor": teacher}))
             for teacher in natural_science_teachers
         }
 
         class_department_map = {
-            course: course[:4]  # Assuming first 4 chars represent department (e.g., CIS101)
+            course: re.match(r'^[A-Z]+', course).group()  # Extracts CIS, BI, CH, etc.
             for course in natural_science_classes
         }
 
         class_teachers_map = {
-            course: list(mongo.db.grades.distinct("instructor", {"course": course}))
+            course: ';'.join(mongo.db.grades.distinct("instructor", {"course": course}))
             for course in natural_science_classes
         }
 
@@ -115,7 +125,7 @@ def user_page():
         results = list(mongo.db.grades.find(query))
         data_by_instructor = {}
         for r in results:
-            instructor = r.get("instructor", "Unknown")  
+            instructor = r.get("instructor", "Unknown")
             data_by_instructor.setdefault(instructor, {"count": 0, "sum": 0.0})
 
             if grade_view == "easyA":
@@ -147,6 +157,7 @@ def user_page():
     except Exception as e:
         print(f"Error: {e}")
         return str(e), 500
+
 
 
 
@@ -198,8 +209,7 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
-        print("Scraped Data:", faculty_data)  
-
+        
         data_processor.insert_faculty_data(faculty_data)
 
     except Exception as e:
