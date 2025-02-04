@@ -23,7 +23,7 @@ You can find the classes that have the highest chance of giving you an A. This p
   - **Database Management:** There are options to clear or update current database records.
 
 
-## :rocket: Installation and Setup
+## :electric_plug: Installation and Setup
 
 ### Prerequisites
 - **Docker:** Make sure Docker is installed. You can follow these official instructions:
@@ -45,7 +45,7 @@ You can find the classes that have the highest chance of giving you an A. This p
    Navigate to http://localhost:5000/admin to load data.
    Navigate to http://localhost:5000/user to view course and instructor comparisons. 
 
-## How to use
+## :rocket: How to use
 - Admin Page:
   - Load data either by specifying a remote JavaScript URL or by running the web scraper.
     - Web scrape URL: https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
