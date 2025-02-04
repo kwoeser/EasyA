@@ -57,6 +57,34 @@ You can find the classes that have the highest chance of giving you an A. This p
   - Use the grade buttons (A, B, C, D, or F) to switch between different grading distributions.
   - View bar graphs representing the percentage of selected grades.
 
+##  :file_folder: File Structure
+Add a file structure here with the basic details about files, below is an example.
+
+```
+.
+Project-1-EasyA/
+│
+├── app.py                 # Main application
+├── data_loader.py         # Data processing and database management
+├── config.py              # Configuration file
+├── scrap.py               # Web scraper
+├── requirements.txt       # Dependencies
+├── dockerfile             # Docker setup
+├── docker-compose.yml     # Docker compose configuration
+├── requirements.txt       # Dependencies
+├── static/                # Static files 
+│   └── gradedata.js       # Grade data 
+├── templates/             # HTML templates for frontend
+│   └── user_page.html     # User page
+│   └── admin_page.html    # Admin page
+├── tests/                 # Unit and integration tests
+│   └── tests.py           # Tests for database
+│   └── testing.txt        # Testing ideas
+├── README.md              # Project README
+└── .gitignore             # Git ignore file
+```
+
+
 ## Contributors
 - Karma Woeser
 - Jason Webster
