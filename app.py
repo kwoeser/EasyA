@@ -16,6 +16,8 @@ from config import Config
 app = Flask(__name__)
 # app.config.from_object(Config)
 app.config["MONGO_URI"] = "mongodb+srv://kwoeser:Herbertpur%403@easya.brvnj.mongodb.net/EasyA?retryWrites=true&w=majority&appName=EasyA"
+app.config["SECRET_KEY"] = "defaultsecretkey"  # testing
+
 mongo = PyMongo(app)
 
 
