@@ -9,10 +9,22 @@ from scrap import run_scraper
 from config import Config
 
 
+
+
+
 # Init flask app and configure MongoDB connection
 app = Flask(__name__)
-app.config.from_object(Config)
+# app.config.from_object(Config)
+app.config["MONGO_URI"] = "mongodb+srv://kwoeser:Herbertpur%403@easya.brvnj.mongodb.net/EasyA?retryWrites=true&w=majority&appName=EasyA"
 mongo = PyMongo(app)
+
+
+# Test connection
+try:
+    mongo.cx.admin.command('ping')
+    print("Successfully connected to MongoDB!")
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
 
 
 NATURAL_SCIENCES_DEPARTMENTS = {
