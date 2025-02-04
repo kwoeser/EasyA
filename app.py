@@ -67,6 +67,7 @@ def create_indexes():
 def admin_page():
     return render_template("admin_page.html")
 
+
 # User page
 @app.route("/user")
 def user_page():
@@ -186,6 +187,38 @@ def user_page():
         selected_grade = request.args.get("grade", "A").lower() + "prec"
         graph_data.sort(key=lambda x: x.get(selected_grade, 0), reverse=True)
 
+
+# # User page, handles requests to display course info
+@app.route("/user")
+def user_page():
+    try:
+        # grab course and instructor names from the database
+        courses_in_database = mongo.db.grades.distinct("course")
+        instructors_in_database = mongo.db.grades.distinct("instructor")
+        print("Courses in database:", courses_in_database)
+        print("Instructors in database:", instructors_in_database)  
+
+        # Format and extracts instructor, departments and classe, funcs from data_loader.py
+        cleaned_instructor_names = data_processor.clean_instructor_names(instructors_in_database)
+        department_options, class_options = data_processor.extract_departments_and_classes(courses_in_database)
+
+        selected_department = request.args.get("department", "")
+        selected_class = request.args.get("class", "")
+        selected_instructor = request.args.get("teacher", "")
+        
+        # build query based on requests and find the matching results 
+        query = build_course_query(selected_department, selected_class, selected_instructor)
+        print("Query has been built:", query)  
+        results = list(mongo.db.grades.find(query).limit(100))
+
+
+
+        # check if results are empty
+        # results are empty??
+        if len(results) == 0:
+            print("No matching classes founds.")
+
+
         return render_template(
             "user_page.html",
             graph_data=graph_data if request.args else [],
@@ -200,10 +233,14 @@ def user_page():
 
 
     except Exception as e:
+
         print(f"Error: {e}")
         return str(e), 500
 
 
+
+
+        return f"User Page Error: {e}", 500
 
 
 
@@ -230,7 +267,7 @@ def load_remote_js():
             flash("Could not extract JSON data from the remote file.", "danger")
             return redirect(url_for("admin_page"))
 
-        # Format the JSON data for the database
+        # format the JSON data for the database
         groups = json.loads(match.group(1))
         records = data_processor.transform_course_data(groups)
 
@@ -255,7 +292,12 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
+
         
+
+        # print("Scraped Data:", faculty_data)  
+
+
         data_processor.insert_faculty_data(faculty_data)
 
     except Exception as e:
@@ -274,13 +316,28 @@ def clear_database():
 # Helper function to build MongoDB queries
 def build_course_query(department, course_class, instructor):
     query = {}
-    if department:
-        query["course"] = {'$regex': f'^{department}'}
-    if course_class:
+    
+    # Map the full actual department name back to its code for query
+    # Otherwise the results won't show on user page
+    department_code = None
+    for code, full_name in NATURAL_SCIENCES_DEPARTMENTS.items():
+        if full_name == department:
+            department_code = code
+            break
+
+    # course "MATH111" match with actual name
+    if department_code and course_class:
+        query["course"] = f'{department_code}{course_class}'
+    elif department_code:
+        query["course"] = {'$regex': f'^{department_code}'}
+    elif course_class:
         query["course"] = {'$regex': f'{course_class}$'}
-    if instructor:
+    elif instructor:
         query["instructor"] = instructor
+    
     return query
+
+
 
 
 if __name__ == "__main__":

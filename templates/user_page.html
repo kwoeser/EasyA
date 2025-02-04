@@ -53,6 +53,7 @@
                     <option value="">Class Level</option>
                 </select>
             </div>
+
         </div>
         <!-- Centered Submit and Reset Buttons -->
         <div class="text-center mt-4 d-flex justify-content-center gap-2">
@@ -68,6 +69,38 @@
         <button class="btn btn-outline-warning grade-filter" data-grade="C">C</button>
         <button class="btn btn-outline-danger grade-filter" data-grade="D">D</button>
         <button class="btn btn-outline-dark grade-filter" data-grade="F">F</button>
+
+        </form>
+
+        
+        
+        
+        
+        {% if results %}
+            <h3>Matching Classes</h3>
+            <ul>
+                {% for result in results %}
+                    <li>{{ result.course }} - Instructor: {{ result.instructor }} - Term: {{ result.term }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No matching classes found.</p>
+        {% endif %}
+        
+        <!-- Results Section -->
+        <!-- Under Construction -->
+        <!-- Will be using AJAX for refresh -->
+       
+       
+        <!--
+        <h2>Results</h2>
+        <ul>
+            {% for result in results %}
+                <li>{{ result.class }} - {{ result.teacher }}: {{ result.percent_a }}% A</li>
+            {% endfor %}
+        </ul>
+    -->
+
     </div>
 
 

@@ -15,3 +15,8 @@
     teacher: teachers's full name.
 
  
+
+ write tests unit tests
+
+Run using:
+docker-compose up --build

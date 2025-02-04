@@ -35,6 +35,10 @@ class DataLoader:
             dept_match = re.findall(r'^[A-Za-z]+', course)
             num_match = re.findall(r'\d+', course)
 
+
+            # print(f"Extracting department and class from: {course}, Dept Match: {dept_match}, Class Match: {num_match}")
+
+
             if dept_match and dept_match[0] in self.NATURAL_SCIENCES_DEPARTMENTS:
                 departments.add(self.NATURAL_SCIENCES_DEPARTMENTS[dept_match[0]])
                 if num_match:
@@ -91,7 +95,9 @@ class DataLoader:
     
     
 
-    # DATABASE SECTION
+
+
+    # DATABASE SECTION, possibly make into seperate class or file
     # INSERTING SCRAPING DATA TO DATABASE 
     
     # ISSUES WITH INSERTING SCRAPED
@@ -99,9 +105,14 @@ class DataLoader:
         bulk_operations = []
 
         for entry in faculty_data:
+
             course_num = entry.get("course_number", None)
             name = self.normalize_name(entry.get("name", "Unknown"))
             department = entry.get("department", "Unknown")
+
+
+            # print("Inserting entry:", entry)
+            # print("INSERTING COURSE:", entry.get("course"))
 
             bulk_operations.append(
                 UpdateOne(

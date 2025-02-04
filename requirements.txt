@@ -4,3 +4,4 @@ Werkzeug==2.3.7
 PyMongo==4.4.0
 requests
 beautifulsoup4
+python-dotenv

@@ -1,0 +1,82 @@
+Test Cases for EasyA
+------------------------------------------------------------------------------------------------------
+
+1. Test Data Loading from gradedata.json
+Description: Ensure the application correctly loads and parses gradedata.json.
+Steps:
+Run the Flask app.
+Check if data is loaded into MongoDB.
+Query MongoDB to confirm expected entries exist.
+Expected Result: The dataset is correctly parsed and stored in the database without errors.
+
+2. Test Filtering by Department
+Description: Ensure that selecting a department filters the available classes and instructors.
+Steps:
+Visit the / user page.
+Select a department from the dropdown.
+Verify that only classes and instructors from that department are shown.
+Expected Result: Only relevant classes and instructors appear in the dropdown menus.
+
+3. Test Filtering by Class
+Description: Ensure selecting a class further filters the available instructors.
+Steps:
+Select a department.
+Select a class from the dropdown.
+Verify that the instructor list updates to show only instructors who have taught that class.
+Expected Result: The instructor list correctly updates based on the selected class.
+
+4. Test Filtering by Instructor
+Description: Ensure selecting an instructor filters the displayed results and graph.
+Steps:
+Select a department and class.
+Choose an instructor.
+Verify that only grade distributions for that instructor are displayed.
+Expected Result: The table and graph update to show only the selected instructor’s grade distribution.
+
+5. Test Graph Data Retrieval API (/get_graph_data)
+Description: Ensure the /get_graph_data API returns correct JSON responses.
+Steps:
+Send a GET request to /get_graph_data?department=CS&class=CS422.
+Inspect the JSON response.
+Verify that the data contains correct grade distributions (aprec, bprec, etc.).
+Expected Result: The API returns structured data with expected values.
+
+6. Test Graph Rendering
+Description: Ensure the graph updates correctly based on the selected filters.
+Steps:
+Select different departments, classes, and instructors.
+Observe if the graph updates dynamically.
+Verify that the bars/pie chart reflect the correct grade distribution.
+Expected Result: The graph updates based on filters and matches the displayed data.
+
+7. Test Sorting by Grade Percentage
+Description: Verify that sorting results by aprec, bprec, etc., works correctly.
+Steps:
+Apply a filter.
+Click the "Sort by A%" button.
+Ensure results appear in descending order of aprec.
+Expected Result: Classes are sorted from highest to lowest percentage of A grades.
+
+8. Test File Upload on /admin Page
+Description: Ensure that administrators can upload gradedata.json.
+Steps:
+Visit /admin.
+Select and upload a sample gradedata.json file.
+Verify that the file is processed and data is updated.
+Expected Result: The file is accepted, parsed, and stored in MongoDB.
+
+9. Test Handling of Invalid gradedata.json
+Description: Ensure the application handles invalid JSON formats gracefully.
+Steps:
+Upload a malformed gradedata.json file.
+Check for error messages.
+Ensure that the system does not crash.
+Expected Result: The system detects the error and prompts the user without breaking.
+
+10. Test Web Scraper (scrap.py)
+Description: Ensure that scrap.py correctly extracts faculty names from the archived UO website.
+Steps:
+Run scrap.py.
+Check the extracted faculty list.
+Verify that names match what’s displayed on the website.
+Expected Result: The scraper retrieves accurate and formatted faculty names.
