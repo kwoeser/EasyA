@@ -69,7 +69,7 @@ def admin_page():
 
 
 # User page
-@app.route("/user")
+@app.route("/")
 def user_page():
     try:
         department = request.args.get("department", "")
