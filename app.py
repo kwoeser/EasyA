@@ -188,37 +188,6 @@ def user_page():
         graph_data.sort(key=lambda x: x.get(selected_grade, 0), reverse=True)
 
 
-# # User page, handles requests to display course info
-@app.route("/user")
-def user_page():
-    try:
-        # grab course and instructor names from the database
-        courses_in_database = mongo.db.grades.distinct("course")
-        instructors_in_database = mongo.db.grades.distinct("instructor")
-        print("Courses in database:", courses_in_database)
-        print("Instructors in database:", instructors_in_database)  
-
-        # Format and extracts instructor, departments and classe, funcs from data_loader.py
-        cleaned_instructor_names = data_processor.clean_instructor_names(instructors_in_database)
-        department_options, class_options = data_processor.extract_departments_and_classes(courses_in_database)
-
-        selected_department = request.args.get("department", "")
-        selected_class = request.args.get("class", "")
-        selected_instructor = request.args.get("teacher", "")
-        
-        # build query based on requests and find the matching results 
-        query = build_course_query(selected_department, selected_class, selected_instructor)
-        print("Query has been built:", query)  
-        results = list(mongo.db.grades.find(query).limit(100))
-
-
-
-        # check if results are empty
-        # results are empty??
-        if len(results) == 0:
-            print("No matching classes founds.")
-
-
         return render_template(
             "user_page.html",
             graph_data=graph_data if request.args else [],
@@ -240,7 +209,7 @@ def user_page():
 
 
 
-        return f"User Page Error: {e}", 500
+        # return f"User Page Error: {e}", 500
 
 
 
