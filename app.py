@@ -75,7 +75,8 @@ def user_page():
         single_class = request.args.get("class", "")
         instructor_type = request.args.get("faculty_type", "all")
         grade_view = request.args.get("grade_view", "easyA")
-        selected_teacher = request.args.get("teacher", "")  #Add this line to capture selected teacher
+        selected_teacher = request.args.get("teacher", "")
+        selected_level = request.args.get("level", "")  # Capture selected level
 
         # Auto-select department based on the selected teacher if not already chosen
         if selected_teacher and not department:
@@ -84,11 +85,16 @@ def user_page():
                 department = teacher_dept.get("department", "")
 
         query = {}
-        if department:
+        if selected_level:
+            # Handle Level Filtering
+            dept_abbr, level_prefix = selected_level.split("-")
+            query["course"] = {"$regex": f"^{dept_abbr}{level_prefix[0]}"}
+        elif department:
             query["course"] = {"$regex": f"^{department}"}
+
         if single_class:
             query["course"] = single_class
-        if selected_teacher:  #Add this condition to filter by teacher
+        if selected_teacher:
             query["instructor"] = selected_teacher
 
         natural_sciences_abbrevs = NATURAL_SCIENCES_DEPARTMENTS.keys()
@@ -99,7 +105,6 @@ def user_page():
         natural_science_teachers = mongo.db.faculty.distinct("name")
 
         # Build mappings
-       
         teacher_department_map = {}
         for doc in mongo.db.faculty.find({}, {"name": 1, "department": 1}):
             instructor_name = doc.get("name", "Unknown")
@@ -123,24 +128,63 @@ def user_page():
 
         # Graph Data
         results = list(mongo.db.grades.find(query))
-        data_by_instructor = {}
-        for r in results:
-            instructor = r.get("instructor", "Unknown")
-            data_by_instructor.setdefault(instructor, {"count": 0, "sum": 0.0})
 
-            if grade_view == "easyA":
-                data_by_instructor[instructor]["sum"] += r.get("aprec", 0.0)
-            else:
-                data_by_instructor[instructor]["sum"] += r.get("dprec", 0.0) + r.get("fprec", 0.0)
+        if selected_level:
+            # Group data by Class when Level is selected
+            data_by_class = {}
+            for r in results:
+                course = r.get("course", "Unknown")
+                data_by_class.setdefault(course, {"count": 0, "sum": 0.0, "aprec": 0.0, "bprec": 0.0, "cprec": 0.0, "dprec": 0.0, "fprec": 0.0})
 
-            data_by_instructor[instructor]["count"] += 1
+                data_by_class[course]["aprec"] += r.get("aprec", 0.0)
+                data_by_class[course]["bprec"] += r.get("bprec", 0.0)
+                data_by_class[course]["cprec"] += r.get("cprec", 0.0)
+                data_by_class[course]["dprec"] += r.get("dprec", 0.0)
+                data_by_class[course]["fprec"] += r.get("fprec", 0.0)
 
-        graph_data = [
-            {"instructor": instructor, "value": info["sum"] / info["count"]}
-            for instructor, info in data_by_instructor.items()
-        ]
+                data_by_class[course]["count"] += 1
 
-        graph_data.sort(key=lambda x: x["value"], reverse=True)
+            graph_data = [
+                {
+                    "label": course,
+                    "aprec": info["aprec"] / info["count"],
+                    "bprec": info["bprec"] / info["count"],
+                    "cprec": info["cprec"] / info["count"],
+                    "dprec": info["dprec"] / info["count"],
+                    "fprec": info["fprec"] / info["count"],
+                }
+                for course, info in data_by_class.items()
+            ]
+        else:
+            # Default: Group data by Instructor
+            data_by_instructor = {}
+            for r in results:
+                instructor = r.get("instructor", "Unknown")
+                data_by_instructor.setdefault(instructor, {"count": 0, "aprec": 0.0, "bprec": 0.0, "cprec": 0.0, "dprec": 0.0, "fprec": 0.0})
+
+                data_by_instructor[instructor]["aprec"] += r.get("aprec", 0.0)
+                data_by_instructor[instructor]["bprec"] += r.get("bprec", 0.0)
+                data_by_instructor[instructor]["cprec"] += r.get("cprec", 0.0)
+                data_by_instructor[instructor]["dprec"] += r.get("dprec", 0.0)
+                data_by_instructor[instructor]["fprec"] += r.get("fprec", 0.0)
+
+                data_by_instructor[instructor]["count"] += 1
+
+            graph_data = [
+                {
+                    "label": instructor,
+                    "aprec": info["aprec"] / info["count"],
+                    "bprec": info["bprec"] / info["count"],
+                    "cprec": info["cprec"] / info["count"],
+                    "dprec": info["dprec"] / info["count"],
+                    "fprec": info["fprec"] / info["count"],
+                }
+                for instructor, info in data_by_instructor.items()
+            ]
+
+        # Sort based on the selected grade (default to A)
+        selected_grade = request.args.get("grade", "A").lower() + "prec"
+        graph_data.sort(key=lambda x: x.get(selected_grade, 0), reverse=True)
 
         return render_template(
             "user_page.html",
@@ -154,9 +198,11 @@ def user_page():
             class_teachers_map=class_teachers_map,
         )
 
+
     except Exception as e:
         print(f"Error: {e}")
         return str(e), 500
+
 
 
 

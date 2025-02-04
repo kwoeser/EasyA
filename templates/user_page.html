@@ -13,7 +13,8 @@
     <!-- Filter Form -->
     <form id="filterForm" method="GET" action="/user" class="mb-4">
         <div class="row">
-            <div class="col-md-4">
+            <!-- Department Dropdown -->
+            <div class="col-md-3">
                 <label for="department">Department:</label>
                 <select name="department" id="department" class="form-control">
                     <option value="">Select a Department</option>
@@ -23,7 +24,8 @@
                 </select>
             </div>
 
-            <div class="col-md-4">
+            <!-- Teacher Dropdown -->
+            <div class="col-md-3">
                 <label for="teacher">Teacher:</label>
                 <select name="teacher" id="teacher" class="form-control">
                     <option value="">Select a Teacher</option>
@@ -33,7 +35,8 @@
                 </select>
             </div>
 
-            <div class="col-md-4">
+            <!-- Class Dropdown -->
+            <div class="col-md-3">
                 <label for="class">Class:</label>
                 <select name="class" id="class" class="form-control">
                     <option value="">Select a Class</option>
@@ -42,17 +45,36 @@
                     {% endfor %}
                 </select>
             </div>
-        </div>
 
-        <div class="text-center mt-4">
+            <!-- LEVEL Dropdown -->
+            <div class="col-md-3">
+                <label for="level">Level:</label>
+                <select name="level" id="level" class="form-control" disabled>
+                    <option value="">Class Level</option>
+                </select>
+            </div>
+        </div>
+        <!-- Centered Submit and Reset Buttons -->
+        <div class="text-center mt-4 d-flex justify-content-center gap-2">
             <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <button type="button" id="resetFilters" class="btn btn-secondary">Reset Filters</button>
         </div>
     </form>
+
+    <!-- Grade Filter Buttons -->
+    <div class="text-center mb-3" id="gradeFilterButtons" style="display: none;">
+        <button class="btn btn-outline-primary grade-filter" data-grade="A">A</button>
+        <button class="btn btn-outline-success grade-filter" data-grade="B">B</button>
+        <button class="btn btn-outline-warning grade-filter" data-grade="C">C</button>
+        <button class="btn btn-outline-danger grade-filter" data-grade="D">D</button>
+        <button class="btn btn-outline-dark grade-filter" data-grade="F">F</button>
+    </div>
+
 
     <!-- Graph Section -->
     <div id="chartsContainer">
         {% if graph_data and graph_data|length > 0 %}
-            <h3 class="mt-4 text-center">A Grade Distribution</h3>
+             <h3 id="chartTitle" class="mt-4 text-center">A Grade Distribution</h3>
         {% else %}
             {% if request.args %}
                 <script>
@@ -65,16 +87,32 @@
     </div>
 </div>
 
+
+
 <script>
     $(document).ready(function () {
         function filterDropdowns() {
             const selectedDept = $('#department').val();
             const selectedTeacher = $('#teacher').val().trim();
             const selectedClass = $('#class').val();
+            const selectedLevel = $('#level').val(); 
 
             console.log("Selected Department:", selectedDept);
             console.log("Selected Teacher:", selectedTeacher);
             console.log("Selected Class:", selectedClass);
+            console.log("Selected Level:", selectedLevel);
+
+            // Lock down LEVEL if Teacher or Class is selected
+            if (selectedTeacher || selectedClass) {
+                $('#level').prop('disabled', true);
+                $('#level').html('<option value="">Select a Level</option>'); // Clear LEVEL options
+            } else if (selectedDept) {
+                $('#level').prop('disabled', false); // Enable LEVEL if only Department is selected
+                populateLevelDropdown(selectedDept, selectedLevel);
+            } else {
+                $('#level').prop('disabled', true);  // Disable LEVEL if no Department is selected
+                $('#level').html('<option value="">Select a Level</option>'); // Clear LEVEL options
+            }
 
             // Filter Teachers based on Department
             $('#teacher option').each(function () {
@@ -83,8 +121,6 @@
                     !selectedDept || teacherDept === selectedDept || $(this).val() === ''
                 );
                 $(this).toggle(show);
-
-                console.log(`Teacher: ${$(this).val()}, Dept: ${teacherDept}, Show: ${show}`);
             });
 
             // Filter Classes based on Department and Teacher
@@ -98,29 +134,110 @@
                     $(this).val() === ''
                 );
                 $(this).toggle(show);
-
-                console.log(`Class: ${$(this).val()}, Dept: ${classDept}, Teachers: ${classTeachers}, Show: ${show}`);
             });
+
+            // Populate LEVEL Dropdown
+            if (selectedDept) {
+                $('#level').prop('disabled', false); // Enable LEVEL dropdown
+                populateLevelDropdown(selectedDept, selectedLevel);
+            } else {
+                $('#level').prop('disabled', true);  // Disable if no department selected
+                $('#level').html('<option value="">Select a Level</option>'); // Clear options
+            }
+        }
+
+        // Function to populate LEVEL dropdown
+        function populateLevelDropdown(department, selectedLevel) {
+            const levels = [100, 200, 300, 400];
+            let options = '<option value="">Select a Level</option>';
+
+            levels.forEach(level => {
+                const value = `${department}-${level}`;
+                const isSelected = selectedLevel === value ? 'selected' : '';
+                options += `<option value="${value}" ${isSelected}>${department} ${level} Level</option>`;
+            });
+
+            $('#level').html(options);
         }
 
         // Apply filters on dropdown changes
-        $('#department, #teacher, #class').on('change', function () {
+        $('#department, #teacher, #class, #level').on('change', function () {
             filterDropdowns();
+            $('#filterForm').submit(); // Submit the form to refresh the graph
         });
 
         // Initial filter when page loads
         filterDropdowns();
 
+        // Retain LEVEL selection after page reload
+        const selectedLevel = "{{ request.args.get('level', '') }}";
+        if (selectedLevel) {
+            $('#level').val(selectedLevel);
+        }
+
         {% if graph_data and graph_data|length > 0 %}
         const gradeData = {{ graph_data | tojson | safe }};
+        const isLevelSelected = $('#level').val() !== ""; // Check if LEVEL is selected
 
-        function createChart(id, labels, data) {
+        // Show grade filter buttons if graph data exists
+        $('#gradeFilterButtons').show();
+
+        // Default to A grades when the page loads
+        $('.grade-filter[data-grade="A"]').addClass('active'); // Highlight A button
+        createChart('dynamicChart', gradeData.map(item => item.label || item.instructor), gradeData.map(item => item.aprec || 0), 'A');
+
+
+
+        // Grade filter buttons - UPDATED WITH SORTING
+        $('.grade-filter').on('click', function () {
+            $('.grade-filter').removeClass('active'); // Remove active class from all buttons
+            $(this).addClass('active');               // Highlight clicked button
+
+            const selectedGrade = $(this).data('grade');  // A, B, C, D, F
+            const gradeKey = selectedGrade.toLowerCase() + 'prec';
+
+            // Map the data based on selected grade
+            let filteredData = gradeData.map(item => ({
+                label: item.label || item.instructor,   // Ensure correct labels
+                value: item[gradeKey] || 0              // Get grade percentage or fallback to 0
+            }));
+
+            //SORT the data from MOST to LEAST based on the selected grade
+            filteredData.sort((a, b) => b.value - a.value);
+
+            // Debugging to ensure data exists
+            console.log("Selected Grade:", selectedGrade);
+            console.log("Filtered Data:", filteredData);
+
+            // Check if data exists
+            const hasData = filteredData.some(item => item.value > 0);
+            if (!hasData) {
+                $('#chartsContainer').html('<p class="text-center text-muted">No data available for selected grade.</p>');
+                $('#chartTitle').hide(); // Hide the title if no data exists
+                return;
+            }
+
+            // Update the graph title
+            $('#chartTitle').text(`${selectedGrade} Grade Distribution`).show();
+
+            // Extract labels and data after sorting
+            const labels = filteredData.map(item => item.label);
+            const data = filteredData.map(item => item.value);
+
+            // Update the chart with the sorted data
+            createChart('dynamicChart', labels, data, selectedGrade);
+        });
+
+
+
+
+        function createChart(id, labels, data, gradeType = 'A') {
             $('#chartsContainer').empty(); // Clear previous chart
 
             const canvas = $('<canvas>').attr({ id: id });
             $('#chartsContainer').append(canvas);
 
-            const dynamicHeight = Math.max(labels.length * 30, 200); // Ensure minimum height
+            const dynamicHeight = Math.max(labels.length * 30, 200);
             canvas.attr('height', dynamicHeight);
 
             new Chart(canvas, {
@@ -128,18 +245,18 @@
                 data: {
                     labels: labels,
                     datasets: [{
-                        label: '% of A Grades',
+                        label: `% of ${gradeType} Grades`,  // Dynamic Label
                         data: data,
                         backgroundColor: 'rgba(75, 192, 192, 0.6)',
                         borderColor: 'rgba(75, 192, 192, 1)',
                         borderWidth: 1,
-                        barThickness: 20 // Fixed bar thickness
+                        barThickness: 20
                     }]
                 },
                 options: {
                     indexAxis: 'y',
                     scales: {
-                        x: { beginAtZero: true, max: 100, title: { display: true, text: '% A Grades' } }
+                        x: { beginAtZero: true, max: 100, title: { display: true, text: `% of ${gradeType} Grades` } }
                     },
                     maintainAspectRatio: false,
                     animation: { duration: 0 },
@@ -149,12 +266,39 @@
             });
         }
 
-        const labels = gradeData.map(item => item.instructor);
-        const data = gradeData.map(item => item.value);
-        createChart('dynamicChart', labels, data);
+
+
         {% endif %}
+
+        //Function to reset all filters
+        function resetFilters() {
+            // Clear dropdown selections
+            $('#department').val('');
+            $('#teacher').val('');
+            $('#class').val('');
+            $('#level').val('').prop('disabled', true); // Reset and disable LEVEL
+
+            // Reset LEVEL dropdown options
+            $('#level').html('<option value="">Select a Level</option>');
+
+            // Make all options visible for Teacher and Class dropdowns
+            $('#teacher option, #class option').show();
+
+            // Reapply dropdown logic
+            filterDropdowns();
+
+            // Submit the form to refresh the graph
+            $('#filterForm').submit();
+        }
+
+        // Attach the reset functionality to the Reset Filters button
+        $('#resetFilters').on('click', function () {
+            resetFilters();
+        });
     });
 </script>
+
+
 
 </body>
 </html>
