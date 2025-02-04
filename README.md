@@ -16,7 +16,7 @@ You can find the classes that have the highest chance of giving you an A. This p
   - **Graph Visualization:**  
     - The grade data is displayed using **Chart.js** in a bar graph format for easy comparisons.
   
-- **Admin Page:**
+**Admin Page:**
   The admin page allows administrators to load historical grade data from a remote JavaScript file or scrape faculty information using predefined department URLs.
   - **Load Remote JS:** Extracts course and instructor information from the provided JS data file and stores it in the MongoDB database.
   - **Faculty Scraper:** Scrapes faculty names and department associations from archived department pages. 
