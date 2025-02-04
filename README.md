@@ -4,7 +4,7 @@ EasyA is a web based application designed to help students analyze the grading h
 Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose.
 You can find the classes that have the highest chance of giving you an A. This project was made for CS 422.
 
-## Features
+## :zap: Features
 
 **User Page:**  
   The user page is designed for students to filter, compare, and visualize grade distributions interactively.  
@@ -23,7 +23,7 @@ You can find the classes that have the highest chance of giving you an A. This p
   - **Database Management:** There are options to clear or update current database records.
 
 
-## Installation and Setup
+## :rocket: Installation and Setup
 
 ### Prerequisites
 - **Docker:** Make sure Docker is installed. You can follow these official instructions:
@@ -58,10 +58,7 @@ You can find the classes that have the highest chance of giving you an A. This p
   - View bar graphs representing the percentage of selected grades.
 
 ##  :file_folder: File Structure
-Add a file structure here with the basic details about files, below is an example.
-
 ```
-.
 Project-1-EasyA/
 │
 ├── app.py                 # Main application
@@ -85,7 +82,7 @@ Project-1-EasyA/
 ```
 
 
-## Contributors
+## :star2: Contributors
 - Karma Woeser
 - Jason Webster
 - Raj Gill
