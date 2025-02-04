@@ -26,10 +26,8 @@ You can find the classes that have the highest chance of giving you an A. This p
 ## Installation and Setup
 
 ### Prerequisites
-- **Docker:** Make sure Docker and Docker Compose are installed. You can follow these official instructions:
-  - [Docker Installation](https://docs.docker.com/get-docker/)
-  - [Docker Compose Installation](https://docs.docker.com/compose/install/)
-
+- **Docker:** Make sure Docker is installed. You can follow these official instructions:
+  - Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop) (includes Docker and Docker Compose)
 
 1. **Clone the Repository:**  
    ```bash
