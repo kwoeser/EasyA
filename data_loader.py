@@ -3,6 +3,10 @@ from pymongo import UpdateOne
 from flask import flash
 
 class DataLoader:
+    """
+    Handles data processing, transformation, and database interactions
+    for faculty and grade records in a MongoDB database.
+    """
     def __init__(self, db, NATURAL_SCIENCES_DEPARTMENTS):
         # Initialize with a mapping of department codes to full names
         self.db = db
@@ -102,6 +106,13 @@ class DataLoader:
     
     # ISSUES WITH INSERTING SCRAPED
     def insert_faculty_data(self, faculty_data):
+        """
+        Inserts faculty data into the MongoDB `faculty` collection.
+        Normalizes faculty names before insertion.
+
+        Parameters:
+            faculty_data (list): List of dictionaries containing faculty details.
+        """
         bulk_operations = []
 
         for entry in faculty_data:
@@ -129,6 +140,15 @@ class DataLoader:
             flash("No faculty data found.", "warning")
 
     def transform_course_data(self, groups):
+        """
+        Transforms raw JSON course data into a structured format for MongoDB.
+
+        Parameters:
+            groups (dict): JSON-like dictionary containing course data.
+
+        Returns:
+            list: A list of formatted course records for database insertion.
+        """
         records = []
 
         for course, details in groups.items():
@@ -149,6 +169,10 @@ class DataLoader:
         return records
 
     def merge_faculty_with_grades(self):
+        """
+        Merges faculty data into the `grades` collection by associating instructors
+        with their respective departments and course numbers.
+        """
         try:
             faculty_records = list(self.db.faculty.find())
             updates = []
