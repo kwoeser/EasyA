@@ -5,6 +5,25 @@ import os
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+"""
+scrap.py
+
+This script scrapes faculty data from archived university catalog pages.
+It retrieves department links, extracts faculty names, and structures them 
+into a JSON file for integration with the EasyA system.
+
+Dependencies:
+- requests
+- BeautifulSoup (bs4)
+- concurrent.futures (for multithreading)
+- re (for regex parsing)
+- json (for saving extracted data)
+
+Usage:
+- Run this script to scrape faculty names from archived pages.
+- Faculty names will be saved in `faculty_data.json`.
+"""
+
 # Define Main URL and Base URL for Web Archive
 MainUrl = "https://web.archive.org/web/20140901091007/http://catalog.uoregon.edu/arts_sciences/"
 baseUrl = "https://web.archive.org"
@@ -33,6 +52,16 @@ NATURAL_SCIENCES_DEPARTMENTS = [
 
 # Retry Session for Handling Request Failures
 def requests_retry_session(retries=5, backoff_factor=2):
+    """
+    Creates a session with automatic retries for failed requests.
+
+    Parameters:
+        retries (int): Number of retry attempts.
+        backoff_factor (int): Time to wait before retrying.
+
+    Returns:
+        requests.Session: Configured session with retry settings.
+    """
     session = requests.Session()
     from requests.adapters import HTTPAdapter
     from urllib3.util.retry import Retry
@@ -57,6 +86,15 @@ def format_name(name):
 
 # Get department catalog links and filter only natural sciences
 def get_catalog(url):
+    """
+    Retrieves department catalog links from the main archive page.
+
+    Parameters:
+        url (str): The main archive URL.
+
+    Returns:
+        dict: A dictionary of department URLs mapped to department codes.
+    """
     try:
         response = session.get(url, timeout=10)
         response.raise_for_status()
@@ -85,6 +123,16 @@ def get_catalog(url):
 
 # Extract faculty names from a department page
 def get_faculty(url, department_code):
+    """
+    Extracts faculty names from a department webpage.
+
+    Parameters:
+        url (str): URL of the department page.
+        department_code (str): Department code (e.g., "CIS" for Computer Science).
+
+    Returns:
+        list: A list of dictionaries containing faculty names and department.
+    """
     try:
         print(f"Fetching: {url}")
         response = session.get(url, timeout=10)
@@ -144,6 +192,12 @@ def run_scraper():
 
 # Flask integration
 def scraper_api():
+    """
+    Runs the scraper and saves the data to a JSON file.
+
+    Returns:
+        dict: A status message indicating the number of records scraped.
+    """
     data = run_scraper()
     with open("faculty_data.json", "w") as file:
         json.dump(data, file, indent=4)
