@@ -3,62 +3,73 @@
 <head>
     <title>EasyA Distribution Viewer</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-    <div class="container mt-5">
-        <!-- Centered Title -->
-        <h1 class="text-center">EasyA Distribution Viewer</h1>
+<div class="container mt-5">
+    <h1 class="text-center">EasyA Distribution Viewer</h1>
 
-        <!-- Filter Form -->
-        <form method="GET" action="/user" class="mb-4">
-            <div class="row">
-
-                <!-- Department Dropdown -->
-                <div class="col-md-4">
-                    <label for="department">Department:</label>
-                    <select name="department" id="department" class="form-control">
-                        <option value="">Select a Department</option>
-                        {% for department in departments %}
-                            <option value="{{ department }}" {% if request.args.get('department') == department %}selected{% endif %}>
-                                {{ department }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-
-                <!-- Class Dropdown -->
-                <div class="col-md-4">
-                    <label for="class">Class:</label>
-                    <select name="class" id="class" class="form-control">
-                        <option value="">Select a Class</option>
-                        {% for class in classes %}
-                            <option value="{{ class }}" {% if request.args.get('class') == class %}selected{% endif %}>
-                                {{ class }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-
-                <!-- Teacher Dropdown -->
-                <div class="col-md-4">
-                    <label for="teacher">Teacher:</label>
-                    <select name="teacher" id="teacher" class="form-control">
-                        <option value="">Select a Teacher</option>
-                        {% for teacher in teachers %}
-                            <option value="{{ teacher }}" {% if request.args.get('teacher') == teacher %}selected{% endif %}>
-                                {{ teacher }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
+    <!-- Filter Form -->
+    <form id="filterForm" method="GET" action="/user" class="mb-4">
+        <div class="row">
+            <!-- Department Dropdown -->
+            <div class="col-md-3">
+                <label for="department">Department:</label>
+                <select name="department" id="department" class="form-control">
+                    <option value="">Select a Department</option>
+                    {% for dept in departments %}
+                        <option value="{{ dept }}" {% if request.args.get('department') == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <!-- Centered Submit Button -->
-            <div class="text-center mt-4">
-                <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <!-- Teacher Dropdown -->
+            <div class="col-md-3">
+                <label for="teacher">Teacher:</label>
+                <select name="teacher" id="teacher" class="form-control">
+                    <option value="">Select a Teacher</option>
+                    {% for teacher in teachers %}
+                    <option value="{{ teacher }}" data-department="{{ teacher_department_map[teacher] }}" data-classes="{{ teacher_classes_map[teacher] | join(';') }}" {% if request.args.get('teacher') == teacher %}selected{% endif %}>{{ teacher }}</option>
+                    {% endfor %}
+                </select>
             </div>
+
+            <!-- Class Dropdown -->
+            <div class="col-md-3">
+                <label for="class">Class:</label>
+                <select name="class" id="class" class="form-control">
+                    <option value="">Select a Class</option>
+                    {% for c in classes %}
+                    <option value="{{ c }}" data-department="{{ class_department_map[c] }}" data-teachers="{{ class_teachers_map[c] }}" {% if request.args.get('class') == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- LEVEL Dropdown -->
+            <div class="col-md-3">
+                <label for="level">Level:</label>
+                <select name="level" id="level" class="form-control" disabled>
+                    <option value="">Class Level</option>
+                </select>
+            </div>
+
+        </div>
+        <!-- Centered Submit and Reset Buttons -->
+        <div class="text-center mt-4 d-flex justify-content-center gap-2">
+            <button type="submit" class="btn btn-primary">Apply Filters</button>
+            <button type="button" id="resetFilters" class="btn btn-secondary">Reset Filters</button>
+        </div>
+    </form>
+
+    <!-- Grade Filter Buttons -->
+    <div class="text-center mb-3" id="gradeFilterButtons" style="display: none;">
+        <button class="btn btn-outline-primary grade-filter" data-grade="A">A</button>
+        <button class="btn btn-outline-success grade-filter" data-grade="B">B</button>
+        <button class="btn btn-outline-warning grade-filter" data-grade="C">C</button>
+        <button class="btn btn-outline-danger grade-filter" data-grade="D">D</button>
+        <button class="btn btn-outline-dark grade-filter" data-grade="F">F</button>
+
         </form>
 
         
@@ -89,6 +100,238 @@
             {% endfor %}
         </ul>
     -->
+
     </div>
+
+
+    <!-- Graph Section -->
+    <div id="chartsContainer">
+        {% if graph_data and graph_data|length > 0 %}
+             <h3 id="chartTitle" class="mt-4 text-center">A Grade Distribution</h3>
+        {% else %}
+            {% if request.args %}
+                <script>
+                    $(document).ready(function () {
+                        alert("No matching data found for the selected filters.");
+                    });
+                </script>
+            {% endif %}
+        {% endif %}
+    </div>
+</div>
+
+
+
+<script>
+    $(document).ready(function () {
+        function filterDropdowns() {
+            const selectedDept = $('#department').val();
+            const selectedTeacher = $('#teacher').val().trim();
+            const selectedClass = $('#class').val();
+            const selectedLevel = $('#level').val(); 
+
+            console.log("Selected Department:", selectedDept);
+            console.log("Selected Teacher:", selectedTeacher);
+            console.log("Selected Class:", selectedClass);
+            console.log("Selected Level:", selectedLevel);
+
+            // Lock down LEVEL if Teacher or Class is selected
+            if (selectedTeacher || selectedClass) {
+                $('#level').prop('disabled', true);
+                $('#level').html('<option value="">Select a Level</option>'); // Clear LEVEL options
+            } else if (selectedDept) {
+                $('#level').prop('disabled', false); // Enable LEVEL if only Department is selected
+                populateLevelDropdown(selectedDept, selectedLevel);
+            } else {
+                $('#level').prop('disabled', true);  // Disable LEVEL if no Department is selected
+                $('#level').html('<option value="">Select a Level</option>'); // Clear LEVEL options
+            }
+
+            // Filter Teachers based on Department
+            $('#teacher option').each(function () {
+                const teacherDept = $(this).data('department');
+                const show = (
+                    !selectedDept || teacherDept === selectedDept || $(this).val() === ''
+                );
+                $(this).toggle(show);
+            });
+
+            // Filter Classes based on Department and Teacher
+            $('#class option').each(function () {
+                const classDept = $(this).data('department');
+                const classTeachers = ($(this).data('teachers') || '').split(';').map(name => name.trim());
+
+                const show = (
+                    (!selectedDept || classDept === selectedDept) &&
+                    (!selectedTeacher || classTeachers.includes(selectedTeacher)) ||
+                    $(this).val() === ''
+                );
+                $(this).toggle(show);
+            });
+
+            // Populate LEVEL Dropdown
+            if (selectedDept) {
+                $('#level').prop('disabled', false); // Enable LEVEL dropdown
+                populateLevelDropdown(selectedDept, selectedLevel);
+            } else {
+                $('#level').prop('disabled', true);  // Disable if no department selected
+                $('#level').html('<option value="">Select a Level</option>'); // Clear options
+            }
+        }
+
+        // Function to populate LEVEL dropdown
+        function populateLevelDropdown(department, selectedLevel) {
+            const levels = [100, 200, 300, 400];
+            let options = '<option value="">Select a Level</option>';
+
+            levels.forEach(level => {
+                const value = `${department}-${level}`;
+                const isSelected = selectedLevel === value ? 'selected' : '';
+                options += `<option value="${value}" ${isSelected}>${department} ${level} Level</option>`;
+            });
+
+            $('#level').html(options);
+        }
+
+        // Apply filters on dropdown changes
+        $('#department, #teacher, #class, #level').on('change', function () {
+            filterDropdowns();
+            $('#filterForm').submit(); // Submit the form to refresh the graph
+        });
+
+        // Initial filter when page loads
+        filterDropdowns();
+
+        // Retain LEVEL selection after page reload
+        const selectedLevel = "{{ request.args.get('level', '') }}";
+        if (selectedLevel) {
+            $('#level').val(selectedLevel);
+        }
+
+        {% if graph_data and graph_data|length > 0 %}
+        const gradeData = {{ graph_data | tojson | safe }};
+        const isLevelSelected = $('#level').val() !== ""; // Check if LEVEL is selected
+
+        // Show grade filter buttons if graph data exists
+        $('#gradeFilterButtons').show();
+
+        // Default to A grades when the page loads
+        $('.grade-filter[data-grade="A"]').addClass('active'); // Highlight A button
+        createChart('dynamicChart', gradeData.map(item => item.label || item.instructor), gradeData.map(item => item.aprec || 0), 'A');
+
+
+
+        // Grade filter buttons - UPDATED WITH SORTING
+        $('.grade-filter').on('click', function () {
+            $('.grade-filter').removeClass('active'); // Remove active class from all buttons
+            $(this).addClass('active');               // Highlight clicked button
+
+            const selectedGrade = $(this).data('grade');  // A, B, C, D, F
+            const gradeKey = selectedGrade.toLowerCase() + 'prec';
+
+            // Map the data based on selected grade
+            let filteredData = gradeData.map(item => ({
+                label: item.label || item.instructor,   // Ensure correct labels
+                value: item[gradeKey] || 0              // Get grade percentage or fallback to 0
+            }));
+
+            //SORT the data from MOST to LEAST based on the selected grade
+            filteredData.sort((a, b) => b.value - a.value);
+
+            // Debugging to ensure data exists
+            console.log("Selected Grade:", selectedGrade);
+            console.log("Filtered Data:", filteredData);
+
+            // Check if data exists
+            const hasData = filteredData.some(item => item.value > 0);
+            if (!hasData) {
+                $('#chartsContainer').html('<p class="text-center text-muted">No data available for selected grade.</p>');
+                $('#chartTitle').hide(); // Hide the title if no data exists
+                return;
+            }
+
+            // Update the graph title
+            $('#chartTitle').text(`${selectedGrade} Grade Distribution`).show();
+
+            // Extract labels and data after sorting
+            const labels = filteredData.map(item => item.label);
+            const data = filteredData.map(item => item.value);
+
+            // Update the chart with the sorted data
+            createChart('dynamicChart', labels, data, selectedGrade);
+        });
+
+
+
+
+        function createChart(id, labels, data, gradeType = 'A') {
+            $('#chartsContainer').empty(); // Clear previous chart
+
+            const canvas = $('<canvas>').attr({ id: id });
+            $('#chartsContainer').append(canvas);
+
+            const dynamicHeight = Math.max(labels.length * 30, 200);
+            canvas.attr('height', dynamicHeight);
+
+            new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `% of ${gradeType} Grades`,  // Dynamic Label
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1,
+                        barThickness: 20
+                    }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    scales: {
+                        x: { beginAtZero: true, max: 100, title: { display: true, text: `% of ${gradeType} Grades` } }
+                    },
+                    maintainAspectRatio: false,
+                    animation: { duration: 0 },
+                    hover: { mode: null },
+                    plugins: { tooltip: { enabled: true } }
+                }
+            });
+        }
+
+
+
+        {% endif %}
+
+        //Function to reset all filters
+        function resetFilters() {
+            // Clear dropdown selections
+            $('#department').val('');
+            $('#teacher').val('');
+            $('#class').val('');
+            $('#level').val('').prop('disabled', true); // Reset and disable LEVEL
+
+            // Reset LEVEL dropdown options
+            $('#level').html('<option value="">Select a Level</option>');
+
+            // Make all options visible for Teacher and Class dropdowns
+            $('#teacher option, #class option').show();
+
+            // Reapply dropdown logic
+            filterDropdowns();
+
+            // Submit the form to refresh the graph
+            $('#filterForm').submit();
+        }
+
+        // Attach the reset functionality to the Reset Filters button
+        $('#resetFilters').on('click', function () {
+            resetFilters();
+        });
+    });
+</script>
+
+
+
 </body>
 </html>

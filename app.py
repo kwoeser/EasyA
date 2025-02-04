@@ -15,27 +15,177 @@ app.config.from_object(Config)
 mongo = PyMongo(app)
 
 
-# All the departments
 NATURAL_SCIENCES_DEPARTMENTS = {
-    "BI": "Biology", 
-    "CH": "Chemistry", 
+    "ANTH": "Anthropology",
+    "BI": "Biology",
+    "CH": "Chemistry",
+    "CH": "Biochemistry",
     "CIS": "Computer and Information Science",
-    "GEOL": "Earth Science", 
-    "GEN SCI": "General Science Program", 
+    "ES": "Earth Science",
+    "GEN SCI": "General Science Program",
+    "GEOG": "Geography",
+    "GEOL": "Geological",
     "HPHY": "Human Physiology",
-    "MATH": "Mathematics", 
-    "NEURO": "Neuroscience", 
-    "PHYS": "Physics", 
+    "MATH": "Mathematics",
+    "NEURO": "Neuroscience",
+    "PHYS": "Physics",
     "PSY": "Psychology"
 }
 
+
 # Init the data processor with the database and departments 
 data_processor = DataLoader(mongo.db, NATURAL_SCIENCES_DEPARTMENTS)
+
+
+# Merge Data Route
+@app.route("/merge_data", methods=["POST"])
+def merge_data():
+    try:
+        data_processor.merge_faculty_with_grades()
+        flash("Faculty data successfully merged with grade records.", "success")
+    except Exception as e:
+        flash(f"An error occurred during data merging: {e}", "danger")
+
+    return redirect(url_for("admin_page"))
+
+#Trying to process grade data in the dropdown choices and narrow 
+#functionality of the user_page
+@app.before_request
+def create_indexes():
+    if not hasattr(app, 'indexes_created'):
+        mongo.db.grades.create_index("course")
+        mongo.db.grades.create_index("instructor")
+        mongo.db.grades.create_index([("course", 1), ("instructor", 1)])  # Compound index
+        mongo.db.faculty.create_index("department")  # Add index for faculty department
+        mongo.db.faculty.create_index("instructor")  # Add index for instructor name
+        app.indexes_created = True
+        print("Indexes created successfully.")
+
 
 # Admin page
 @app.route("/admin")
 def admin_page():
     return render_template("admin_page.html")
+
+
+# User page
+@app.route("/user")
+def user_page():
+    try:
+        department = request.args.get("department", "")
+        single_class = request.args.get("class", "")
+        instructor_type = request.args.get("faculty_type", "all")
+        grade_view = request.args.get("grade_view", "easyA")
+        selected_teacher = request.args.get("teacher", "")
+        selected_level = request.args.get("level", "")  # Capture selected level
+
+        # Auto-select department based on the selected teacher if not already chosen
+        if selected_teacher and not department:
+            teacher_dept = mongo.db.faculty.find_one({"instructor": selected_teacher}, {"department": 1})
+            if teacher_dept:
+                department = teacher_dept.get("department", "")
+
+        query = {}
+        if selected_level:
+            # Handle Level Filtering
+            dept_abbr, level_prefix = selected_level.split("-")
+            query["course"] = {"$regex": f"^{dept_abbr}{level_prefix[0]}"}
+        elif department:
+            query["course"] = {"$regex": f"^{department}"}
+
+        if single_class:
+            query["course"] = single_class
+        if selected_teacher:
+            query["instructor"] = selected_teacher
+
+        natural_sciences_abbrevs = NATURAL_SCIENCES_DEPARTMENTS.keys()
+
+        natural_science_classes = mongo.db.grades.distinct(
+            "course", {"course": {"$regex": f"^({'|'.join(natural_sciences_abbrevs)})"}}
+        )
+        natural_science_teachers = mongo.db.faculty.distinct("name")
+
+        # Build mappings
+        teacher_department_map = {}
+        for doc in mongo.db.faculty.find({}, {"name": 1, "department": 1}):
+            instructor_name = doc.get("name", "Unknown")
+            department = doc.get("department", "Unknown")
+            teacher_department_map[instructor_name] = department
+
+        teacher_classes_map = {
+            teacher: ';'.join(str(course) for course in mongo.db.grades.distinct("course", {"instructor": teacher}))
+            for teacher in natural_science_teachers
+        }
+
+        class_department_map = {
+            course: re.match(r'^[A-Z]+', course).group()  # Extracts CIS, BI, CH, etc.
+            for course in natural_science_classes
+        }
+
+        class_teachers_map = {
+            course: ';'.join(mongo.db.grades.distinct("instructor", {"course": course}))
+            for course in natural_science_classes
+        }
+
+        # Graph Data
+        results = list(mongo.db.grades.find(query))
+
+        if selected_level:
+            # Group data by Class when Level is selected
+            data_by_class = {}
+            for r in results:
+                course = r.get("course", "Unknown")
+                data_by_class.setdefault(course, {"count": 0, "sum": 0.0, "aprec": 0.0, "bprec": 0.0, "cprec": 0.0, "dprec": 0.0, "fprec": 0.0})
+
+                data_by_class[course]["aprec"] += r.get("aprec", 0.0)
+                data_by_class[course]["bprec"] += r.get("bprec", 0.0)
+                data_by_class[course]["cprec"] += r.get("cprec", 0.0)
+                data_by_class[course]["dprec"] += r.get("dprec", 0.0)
+                data_by_class[course]["fprec"] += r.get("fprec", 0.0)
+
+                data_by_class[course]["count"] += 1
+
+            graph_data = [
+                {
+                    "label": course,
+                    "aprec": info["aprec"] / info["count"],
+                    "bprec": info["bprec"] / info["count"],
+                    "cprec": info["cprec"] / info["count"],
+                    "dprec": info["dprec"] / info["count"],
+                    "fprec": info["fprec"] / info["count"],
+                }
+                for course, info in data_by_class.items()
+            ]
+        else:
+            # Default: Group data by Instructor
+            data_by_instructor = {}
+            for r in results:
+                instructor = r.get("instructor", "Unknown")
+                data_by_instructor.setdefault(instructor, {"count": 0, "aprec": 0.0, "bprec": 0.0, "cprec": 0.0, "dprec": 0.0, "fprec": 0.0})
+
+                data_by_instructor[instructor]["aprec"] += r.get("aprec", 0.0)
+                data_by_instructor[instructor]["bprec"] += r.get("bprec", 0.0)
+                data_by_instructor[instructor]["cprec"] += r.get("cprec", 0.0)
+                data_by_instructor[instructor]["dprec"] += r.get("dprec", 0.0)
+                data_by_instructor[instructor]["fprec"] += r.get("fprec", 0.0)
+
+                data_by_instructor[instructor]["count"] += 1
+
+            graph_data = [
+                {
+                    "label": instructor,
+                    "aprec": info["aprec"] / info["count"],
+                    "bprec": info["bprec"] / info["count"],
+                    "cprec": info["cprec"] / info["count"],
+                    "dprec": info["dprec"] / info["count"],
+                    "fprec": info["fprec"] / info["count"],
+                }
+                for instructor, info in data_by_instructor.items()
+            ]
+
+        # Sort based on the selected grade (default to A)
+        selected_grade = request.args.get("grade", "A").lower() + "prec"
+        graph_data.sort(key=lambda x: x.get(selected_grade, 0), reverse=True)
 
 
 # # User page, handles requests to display course info
@@ -62,6 +212,7 @@ def user_page():
         results = list(mongo.db.grades.find(query).limit(100))
 
 
+
         # check if results are empty
         # results are empty??
         if len(results) == 0:
@@ -70,15 +221,27 @@ def user_page():
 
         return render_template(
             "user_page.html",
-            departments=department_options,
-            classes=class_options,
-            teachers=sorted(cleaned_instructor_names),
-            results=results,
-            request=request
+            graph_data=graph_data if request.args else [],
+            departments=NATURAL_SCIENCES_DEPARTMENTS.keys(),
+            teachers=natural_science_teachers,
+            classes=natural_science_classes,
+            teacher_department_map=teacher_department_map,
+            teacher_classes_map=teacher_classes_map,
+            class_department_map=class_department_map,
+            class_teachers_map=class_teachers_map,
         )
-    
+
+
     except Exception as e:
+
+        print(f"Error: {e}")
+        return str(e), 500
+
+
+
+
         return f"User Page Error: {e}", 500
+
 
 
 
@@ -129,7 +292,11 @@ def scrape_faculty():
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
+
+        
+
         # print("Scraped Data:", faculty_data)  
+
 
         data_processor.insert_faculty_data(faculty_data)
 
@@ -146,7 +313,7 @@ def clear_database():
     return redirect(url_for("admin_page"))
 
 
-# Build mongodb query based on the selected filters
+# Helper function to build MongoDB queries
 def build_course_query(department, course_class, instructor):
     query = {}
     

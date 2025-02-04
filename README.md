@@ -41,4 +41,3 @@ docker-compose up --build
 - Raj Gill
 - Giovanni Mendoza Celestino
 
-
