@@ -27,10 +27,13 @@ Extract and store faculty data in MongoDB database using web scraper.
 
 - **Graph:**
 
-### Project Structure
 
+## Prerequisites
+- **Docker:** Make sure Docker and Docker Compose are installed. You can follow these official instructions:
+  - [Docker Installation](https://docs.docker.com/get-docker/)
+  - [Docker Compose Installation](https://docs.docker.com/compose/install/)
 
-### 
+### Installation and Setup
 Steps to set up the project using Docker and MongoDB.
 Make sure Docker is installed
 docker-compose up --build
