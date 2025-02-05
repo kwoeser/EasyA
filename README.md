@@ -5,8 +5,7 @@ Students can use historical grade data to compare grading distributions and make
 
 ## :zap: Features
 
-**User Page:**  
-  The user page is designed for students to filter, compare, and visualize grade distributions interactively.  
+**User Page:** The user page is designed for students to filter, compare, and visualize grade distributions interactively.  
   - **Dynamic Filtering Dropdowns:**  
     - Filter by department, class, or instructor. The available options update dynamically based on the user’s selections (e.g., selecting a department will filter the classes and instructors shown).  
     - Departments can be sorted by class levels (e.g., 100-level, 200-level, up to 400-level classes).  
@@ -15,8 +14,7 @@ Students can use historical grade data to compare grading distributions and make
   - **Graph Visualization:**  
     - The grade data is displayed using **Chart.js** in a bar graph format for easy comparisons.
   
-**Admin Page:**
-  The admin page allows administrators to load historical grade data from a remote JavaScript file or scrape faculty information using predefined department URLs.
+**Admin Page:** The admin page allows administrators to load historical grade data from a remote JavaScript file or scrape faculty information using predefined department URLs.
   - **Load Remote JS:**
     - Extracts course and instructor information from the provided JS data file and stores it in the **MongoDB** database.
   - **Faculty Scraper:**
