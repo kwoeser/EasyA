@@ -51,10 +51,10 @@ You can find the classes that have the highest chance of giving you an A. This p
 ## :rocket: How to use
 - Admin Page:
   - Load data either by specifying a remote JavaScript URL or by running the web scraper.
-    - Web scrape URL:
-      - https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
     - JS URL:
       - https://emeraldmediagroup.github.io/grade-data/gradedata.js
+    - Web scrape URL:
+      - https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
   - Clear and reload the database when needed.
  
 - User Page:
@@ -71,6 +71,9 @@ Project-1-EasyA/
 ├── config.py              # Configuration file
 ├── scrap.py               # Web scraper
 ├── requirements.txt       # Dependencies
+├── suggestions.txt        # Suggestions
+├── variables.txt          # database variables
+├── ideas.txt              # Initial Ideas
 ├── dockerfile             # Docker setup
 ├── docker-compose.yml     # Docker compose configuration
 ├── requirements.txt       # Dependencies
