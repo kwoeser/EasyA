@@ -36,7 +36,7 @@ class TestDatabaseOperations(unittest.TestCase):
         self.data_loader.insert_faculty_data(SAMPLE_FACULTY_DATA)
 
         stored_faculty = list(self.mock_db.faculty.find({}))
-        self.assertEqual(len(stored_faculty), 2)  # Expect 2 faculty records
+        self.assertEqual(len(stored_faculty), 2)  
 
         # Validate stored data
         self.assertEqual(stored_faculty[0]["name"], "Doe, John")
@@ -49,7 +49,7 @@ class TestDatabaseOperations(unittest.TestCase):
         self.mock_db.grades.insert_many(SAMPLE_GRADE_DATA)
 
         stored_grades = list(self.mock_db.grades.find({}))
-        self.assertEqual(len(stored_grades), 2)  # Expect 2 grade records
+        self.assertEqual(len(stored_grades), 2)  
 
         # Validate stored data
         self.assertEqual(stored_grades[0]["course"], "CIS101")

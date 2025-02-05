@@ -40,6 +40,9 @@ data_processor = DataLoader(mongo.db, NATURAL_SCIENCES_DEPARTMENTS)
 # Merge Data Route
 @app.route("/merge_data", methods=["POST"])
 def merge_data():
+    """
+    Merges faculty data with grade records in MongoDB.
+    """
     try:
         data_processor.merge_faculty_with_grades()
         flash("Faculty data successfully merged with grade records.", "success")
@@ -48,10 +51,13 @@ def merge_data():
 
     return redirect(url_for("admin_page"))
 
-#Trying to process grade data in the dropdown choices and narrow 
-#functionality of the user_page
+# Trying to process grade data in the dropdown choices and narrow 
+# functionality of the user_page
 @app.before_request
 def create_indexes():
+    """
+    Creates necessary MongoDB indexes for query performance.
+    """
     if not hasattr(app, 'indexes_created'):
         mongo.db.grades.create_index("course")
         mongo.db.grades.create_index("instructor")
@@ -65,12 +71,19 @@ def create_indexes():
 # Admin page
 @app.route("/admin")
 def admin_page():
+    """
+    Renders the admin page for data handling
+    """
     return render_template("admin_page.html")
 
 
 # User page
 @app.route("/user")
 def user_page():
+    """
+    Render the user page. Displays course and grade data based on 
+    user-selected filters such as department, class, and instructor.
+    """
     try:
         department = request.args.get("department", "")
         single_class = request.args.get("class", "")
@@ -118,7 +131,8 @@ def user_page():
         }
 
         class_department_map = {
-            course: re.match(r'^[A-Z]+', course).group()  # Extracts CIS, BI, CH, etc.
+            # Extracts CIS, BI, CH, etc.
+            course: re.match(r'^[A-Z]+', course).group()  
             for course in natural_science_classes
         }
 
@@ -156,6 +170,7 @@ def user_page():
                 }
                 for course, info in data_by_class.items()
             ]
+
         else:
             # Default: Group data by Instructor
             data_by_instructor = {}
@@ -209,18 +224,17 @@ def user_page():
 
 
 
-        # return f"User Page Error: {e}", 500
-
-
-
-
-
-
 # Load js data, extract the JSON and insert it into the database
 @app.route("/load_remote_js", methods=["POST"])
 def load_remote_js():
+    """
+    Loads and processes course data from the JS file. Then insert it into the MongoDB database.
+
+
+    Returns:
+        Redirects admin to the admin page with a message saying if the data was successful or failed.
+    """
     try:
-        # Get the file URL from user input on admin page
         file_url = request.form.get("file_url")
         if not file_url or not file_url.startswith("http"):
             flash("Invalid file URL provided.", "danger")
@@ -258,14 +272,14 @@ def load_remote_js():
 # Scrape faculty data and insert/update it in the database
 @app.route("/scrape_faculty", methods=["POST"])
 def scrape_faculty():
+    """
+    Scrapes faculty data from an external source and updates the MongoDB database.
+    Calls run_scraper from scrap.py file
+    """
     try:
         # Run the scraper to get faculty data then insert to db
         faculty_data = run_scraper()
-
-        
-
         # print("Scraped Data:", faculty_data)  
-
 
         data_processor.insert_faculty_data(faculty_data)
 
@@ -275,15 +289,33 @@ def scrape_faculty():
     return redirect(url_for("admin_page"))
 
 
-# Clears database of all records from the grades and faculty collections
+
 @app.route("/clear_database", methods=["POST"])
 def clear_database():
+    """
+    Clears MongoDB of all records from the grades and faculty collections
+    Calls clear_all_collections from data_loader.py 
+    """
     data_processor.clear_all_collections()
     return redirect(url_for("admin_page"))
 
 
 # Helper function to build MongoDB queries
 def build_course_query(department, course_class, instructor):
+    """
+    Creates a MongoDB query for fetching course and instructor data.
+    The query is built based on the department, course class, and instructor parameters. 
+    It maps the department's full name to its corresponding code and forms the appropriate
+    query structure.
+
+    Args:
+        department (str): Full name of the department (e.g., 'Mathematics')
+        course_class (str): Specific course class to search for (e.g., '111')
+        instructor (str): Instructor name
+
+    Returns:
+        dict: MongoDB query dictionary to fetch relevant course and instructor data.
+    """
     query = {}
     
     # Map the full actual department name back to its code for query
