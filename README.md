@@ -27,7 +27,7 @@ Students can use historical grade data to compare grading distributions and make
 
 ### Prerequisites
 - **Docker:** Make sure Docker is installed. You can follow these official instructions:
-  - Download and install [Windows Docker Desktop](https://www.docker.com/products/docker-desktop)
+  - Download and install [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
 1. **Clone the Repository:**  
    ```bash
