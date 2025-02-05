@@ -55,9 +55,9 @@ Students can use historical grade data to compare grading distributions and make
   - Clear and reload the database when needed.
  
  - User Page:
-  - Use the dropdown menus to filter department, instructor, or class to dynamically update graphs.
-  - Use the grade buttons (A, B, C, D, or F) to switch between different grading distributions.
-  - View bar graphs representing the percentage of selected grades.
+    - Use the dropdown menus to filter department, instructor, or class to dynamically update graphs.
+    - Use the grade buttons (A, B, C, D, or F) to switch between different grading distributions.
+    - View bar graphs representing the percentage of selected grades.
 
 
 ##  :file_folder: File Structure
