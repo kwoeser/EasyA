@@ -2,7 +2,7 @@
 
 EasyA is a web based application designed to help students analyze the grading history of courses and instructors. 
 Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose.
-You can find the classes that have the highest chance of giving you an A. This project was made for CS 422.
+You can find the classes that have the highest chance of giving you an A. This project was made for CS 422 at the University of Oregon.
 
 ## :zap: Features
 
@@ -18,9 +18,12 @@ You can find the classes that have the highest chance of giving you an A. This p
   
 **Admin Page:**
   The admin page allows administrators to load historical grade data from a remote JavaScript file or scrape faculty information using predefined department URLs.
-  - **Load Remote JS:** Extracts course and instructor information from the provided JS data file and stores it in the MongoDB database.
-  - **Faculty Scraper:** Scrapes faculty names and department associations from archived department pages. 
-  - **Database Management:** There are options to clear or update current database records.
+  - **Load Remote JS:**
+    - Extracts course and instructor information from the provided JS data file and stores it in the MongoDB database.
+  - **Faculty Scraper:**
+    - Scrapes faculty names and department associations from archived department pages. 
+  - **Database Management:**
+    - There are options to clear or update current database records.
 
 
 ## :electric_plug: Installation and Setup
@@ -48,8 +51,10 @@ You can find the classes that have the highest chance of giving you an A. This p
 ## :rocket: How to use
 - Admin Page:
   - Load data either by specifying a remote JavaScript URL or by running the web scraper.
-    - Web scrape URL: https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
-    - JS URL: https://emeraldmediagroup.github.io/grade-data/gradedata.js
+    - Web scrape URL:
+      - https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
+    - JS URL:
+      - https://emeraldmediagroup.github.io/grade-data/gradedata.js
   - Clear and reload the database when needed.
  
 - User Page:
