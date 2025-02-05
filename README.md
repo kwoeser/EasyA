@@ -45,8 +45,8 @@ You can find the classes that have the highest chance of giving you an A. This p
 3. **Access the Application:**
    - Open your browser and navigate to:
    ```bash
-   http://localhost:5000/admin to load data.
-   http://localhost:5000/user to view course and instructor comparisons. 
+   http://localhost:5000/admin
+   http://localhost:5000/user 
 
 ## :rocket: How to use
 - Admin Page:
