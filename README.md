@@ -1,7 +1,6 @@
 # EasyA – Grading Analysis App 
 
-EasyA is a web based application designed to help students analyze the grading history of courses and instructors. 
-Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose. This application makes it easy to find the classes that have the highest chance of giving you an A. Project was created for CS 422 at the University of Oregon.
+EasyA is a web based application designed to help students analyze the grading history of courses and instructors. Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose. This application makes it easy to find the classes that have the highest chance of giving you an A. Project was created for CS 422 at the University of Oregon.
 
 ## :zap: Features
 
@@ -33,25 +32,23 @@ Students can use historical grade data to compare grading distributions and make
    ```bash
    git clone https://github.com/your-repo/Project-1-EasyA.git
    cd Project-1-EasyA
-
 2. **Build and Run the Containers:**
    - Run the following command to build the project and start the containers:
    ```bash
    docker-compose up --build
-
 3. **Access the Application:**
    - Open your browser and navigate to:
    ```bash
    http://localhost:5000/admin 
    http://localhost:5000/user 
-
 ## :rocket: How to use
 - Admin Page:
-  - Provides options to process and load grade data through Flask's backend routes.
-    - JS URL:
+  - Upload and load grade data through Admin Page.
+    - Enter Remote File URL:
       - https://emeraldmediagroup.github.io/grade-data/gradedata.js
-    - Web scrape URL:
+    - Enter Faculty Scrape URL:
       - https://web.archive.org/web/20141107201343/http://catalog.uoregon.edu/arts_sciences/
+  - Merge data.
   - Clear and reload the database when needed.
  
  - User Page:
@@ -70,6 +67,7 @@ Project-1-EasyA/
 ├── scrap.py               # Web scraper
 ├── dockerfile             # Docker setup
 ├── docker-compose.yml     # Docker compose configuration
+├── requirements.txt       # Dependencies
 ├── docs/                  # Documents 
 │   └── EasyA.pdf          # Final doc
 │   └── SRS.pdf            # SRS doc
@@ -83,7 +81,6 @@ Project-1-EasyA/
 │   └── testing.txt        # Testing ideas
 ├── etc/                   # extra text files
 │   └── ideas.txt          # Initial Ideas
-│   └── requirements.txt   # Dependencies
 │   └── suggustions.txt    # Suggestions
 │   └── variables.txt      # database variables
 ├── README.md              # Project README
