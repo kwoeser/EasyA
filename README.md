@@ -1,4 +1,4 @@
-# Project-1-EasyA
+# EasyA – Grading Analysis App 
 
 EasyA is a web based application designed to help students analyze the grading history of courses and instructors. 
 Students can use historical grade data to compare grading distributions and make informed decisions about which classes and instructors to choose. This application makes it easy to find the classes that have the highest chance of giving you an A. Project was created for CS 422 at the University of Oregon.
@@ -68,12 +68,11 @@ Project-1-EasyA/
 ├── data_loader.py         # Data processing and database management
 ├── config.py              # Configuration file
 ├── scrap.py               # Web scraper
-├── requirements.txt       # Dependencies
-├── suggestions.txt        # Suggestions
-├── variables.txt          # database variables
-├── ideas.txt              # Initial Ideas
 ├── dockerfile             # Docker setup
 ├── docker-compose.yml     # Docker compose configuration
+├── docs/                  # Documents 
+│   └── EasyA.pdf          # Final doc
+│   └── SRS.pdf            # SRS doc
 ├── static/                # Static files 
 │   └── gradedata.js       # Grade data 
 ├── templates/             # HTML templates for frontend
@@ -82,6 +81,11 @@ Project-1-EasyA/
 ├── tests/                 # Unit and integration tests
 │   └── tests.py           # Tests for database
 │   └── testing.txt        # Testing ideas
+├── etc/                   # extra text files
+│   └── ideas.txt          # Initial Ideas
+│   └── requirements.txt   # Dependencies
+│   └── suggustions.txt    # Suggestions
+│   └── variables.txt      # database variables
 ├── README.md              # Project README
 └── .gitignore             # Git ignore file
 ```
