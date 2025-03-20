@@ -1,6 +1,6 @@
 Flask==2.3.3
 Flask-PyMongo==2.3.0
-Werkzeug==2.3.7
+Werkzeug==3.0.6
 PyMongo==4.4.0
 requests
 beautifulsoup4
